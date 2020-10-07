@@ -1,1 +1,3 @@
-print("validator")
+import ValidatorCore
+
+Validator.main()
