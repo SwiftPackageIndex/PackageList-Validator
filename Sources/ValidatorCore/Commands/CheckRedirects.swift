@@ -9,6 +9,12 @@ extension Validator {
 
         mutating func run() throws {
             print("Checking \(packageURL) for redirects ...")
+            switch resolveRedirects(for: packageURL) {
+                case .initial:
+                    print("\(packageURL) unchanged")
+                case .redirected(let url):
+                    print("\(packageURL) -> \(url)")
+            }
         }
     }
 }
