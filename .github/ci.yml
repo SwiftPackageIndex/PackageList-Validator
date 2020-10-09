@@ -4,7 +4,12 @@ name: Nightly Audit
 #   workflow_dispatch:
 #   schedule:
 #     - cron: '0 2 * * *'
-
+on:
+    push:
+      branches: [ main ]
+    pull_request:
+      branches: [ main ]
+  
 jobs:
   run_nightly:
     runs-on: macos-latest
