@@ -7,6 +7,8 @@ let package = Package(
     name: "validator",
     platforms: [.macOS(.v10_15)],
     dependencies: [
+        .package(name: "async-http-client",
+                 url: "https://github.com/swift-server/async-http-client.git", from: "1.2.0"),
         .package(name: "swift-argument-parser",
                  url: "https://github.com/apple/swift-argument-parser", from: "0.2.0"),
     ],
@@ -15,6 +17,7 @@ let package = Package(
         .target(
             name: "ValidatorCore",
             dependencies: [
+                .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]),
         .testTarget(name: "ValidatorTests", dependencies: ["ValidatorCore"]),
