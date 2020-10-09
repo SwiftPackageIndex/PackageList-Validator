@@ -1,5 +1,6 @@
 import ArgumentParser
 import Foundation
+import NIO
 
 
 extension Validator {
@@ -9,8 +10,9 @@ extension Validator {
 
         mutating func run() throws {
             print("Checking for redirects ...")
-            packageUrls.forEach { packageURL in
-                switch resolveRedirects(for: packageURL) {
+            let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            try packageUrls.forEach { packageURL in
+                switch try resolveRedirects(eventLoop: elg.next(), for: packageURL).wait() {
                     case .initial:
                         print("•  \(packageURL) unchanged")
                     case .redirected(let url):

@@ -1,17 +1,17 @@
 import Foundation
+import NIO
 
 
 class RedirectFollower: NSObject, URLSessionDataDelegate {
-    var status: Redirect
+    var status: Redirect = .initial
     var session: URLSession?
     var task: URLSessionDataTask?
 
-    init(initialURL: URL, completion: @escaping () -> Void) {
-        self.status = .initial
+    init(initialURL: URL, completion: @escaping (Redirect) -> Void) {
         super.init()
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        self.task = session?.dataTask(with: initialURL) { (_, response, error) in
-            completion()
+        self.task = session?.dataTask(with: initialURL) { [weak self] (_, response, error) in
+            completion(self!.status)
         }
         self.task?.resume()
     }
@@ -35,14 +35,12 @@ public enum Redirect {
 }
 
 
-public func resolveRedirects(for url: URL, timeout: TimeInterval = 10) -> Redirect {
-    let semaphore = DispatchSemaphore(value: 0)
+public func resolveRedirects(eventLoop: EventLoop, for url: URL, timeout: TimeInterval = 10) -> EventLoopFuture<Redirect> {
+    let promise = eventLoop.next().makePromise(of: Redirect.self)
 
-    let follower = RedirectFollower(initialURL: url) {
-        semaphore.signal()
+    let _ = RedirectFollower(initialURL: url) { result in
+        promise.succeed(result)
     }
 
-    _ = semaphore.wait(timeout: .now() + timeout)
-
-    return follower.status
+    return promise.futureResult
 }
