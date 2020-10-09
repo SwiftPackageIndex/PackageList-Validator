@@ -1,0 +1,19 @@
+name: Nightly Audit
+
+# on: 
+#   workflow_dispatch:
+#   schedule:
+#     - cron: '0 2 * * *'
+
+jobs:
+  run_nightly:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Run nightly script
+      # run: xcrun swift nightly.swift
+      run: ./run.sh
+      env:
+        DEVELOPER_DIR: /Applications/Xcode_12.app
+        GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
