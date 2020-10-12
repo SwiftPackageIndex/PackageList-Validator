@@ -3,11 +3,12 @@ import NIO
 
 
 class RedirectFollower: NSObject, URLSessionDataDelegate {
-    var status: Redirect = .initial
+    var status: Redirect
     var session: URLSession?
     var task: URLSessionDataTask?
 
     init(initialURL: URL, completion: @escaping (Redirect) -> Void) {
+        self.status = .initial(initialURL)
         super.init()
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         self.task = session?.dataTask(with: initialURL) { [weak self] (_, response, error) in
@@ -30,8 +31,17 @@ class RedirectFollower: NSObject, URLSessionDataDelegate {
 
 
 public enum Redirect {
-    case initial
+    case initial(URL)
     case redirected(to: URL)
+
+    var url: URL {
+        switch self {
+            case .initial(let url):
+                return url
+            case .redirected(to: let url):
+                return url
+        }
+    }
 }
 
 

@@ -10,6 +10,9 @@ extension Validator {
         @Argument(help: "Package urls to check")
         var packageURLs: [URL]
 
+        @Flag(name: .shortAndLong, help: "follow redirects")
+        var follow = false
+
         mutating func run() throws {
             print("Checking dependencies ...")
             let client = HTTPClient(eventLoopGroupProvider: .createNew)
@@ -17,7 +20,7 @@ extension Validator {
 
             try packageURLs.forEach { packageURL in
                 print("- \(packageURL) ...")
-                try findDependencies(client: client, url: packageURL)
+                try findDependencies(client: client, url: packageURL, followRedirects: follow)
                     .wait()
                     .forEach { url in
                         print("  - \(url)")
@@ -63,10 +66,19 @@ func dumpPackage(manifestURL: URL) throws -> [URL] {
 }
 
 
-func findDependencies(client: HTTPClient, url: URL) throws -> EventLoopFuture<[URL]> {
+func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = false) throws -> EventLoopFuture<[URL]> {
     getManifestURL(client: client, url: url)
         .flatMapThrowing {
             try dumpPackage(manifestURL: $0)
+        }
+        .flatMap { urls in
+            let el = client.eventLoopGroup.next()
+            let req = urls.map { url -> EventLoopFuture<URL> in
+                followRedirects
+                    ? resolveRedirects(eventLoop: client.eventLoopGroup.next(), for: url).map(\.url)
+                    : el.makeSucceededFuture(url)
+            }
+            return EventLoopFuture.whenAllSucceed(req, on: el)
         }
 }
 
