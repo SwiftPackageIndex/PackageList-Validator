@@ -29,13 +29,11 @@ extension Validator {
             print("Checking for redirects (\(packageUrls.count) packages) ...")
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
             try packageUrls.forEach { packageURL in
-                // delete git extensions to avoid everything being flagged as a redirect
-                let url = packageURL.deletingGitExtension()
-                switch try resolveRedirects(eventLoop: elg.next(), for: url).wait() {
+                switch try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL).wait() {
                     case .initial:
                         print("•  \(packageURL) unchanged")
                     case .redirected(let url):
-                        print("↦  \(packageURL) -> \(url.addingGitExtension())")
+                        print("↦  \(packageURL) -> \(url)")
                 }
             }
         }

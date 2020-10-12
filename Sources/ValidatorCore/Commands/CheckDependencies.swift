@@ -75,7 +75,8 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
             let el = client.eventLoopGroup.next()
             let req = urls.map { url -> EventLoopFuture<URL> in
                 followRedirects
-                    ? resolveRedirects(eventLoop: client.eventLoopGroup.next(), for: url).map(\.url)
+                    ? resolvePackageRedirects(eventLoop: client.eventLoopGroup.next(),
+                                              for: url).map(\.url)
                     : el.makeSucceededFuture(url)
             }
             return EventLoopFuture.whenAllSucceed(req, on: el)

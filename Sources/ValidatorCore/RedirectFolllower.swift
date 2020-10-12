@@ -54,3 +54,23 @@ public func resolveRedirects(eventLoop: EventLoop, for url: URL, timeout: TimeIn
 
     return promise.futureResult
 }
+
+
+
+/// Resolve redirects for package urls. In particular, this strips the `.git` extension from the test url, because it would always lead to a redirect. It also normalizes the output to always have a `.git` extension.
+/// - Parameters:
+///   - eventLoop: EventLoop
+///   - url: url to test
+///   - timeout: request timeout
+/// - Returns: `Redirect`
+public func resolvePackageRedirects(eventLoop: EventLoop, for url: URL, timeout: TimeInterval = 10) -> EventLoopFuture<Redirect> {
+    resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension(), timeout: timeout)
+        .map {
+            switch $0 {
+                case .initial:
+                    return .initial(url)
+                case .redirected(to: let url):
+                    return .redirected(to: url.addingGitExtension())
+            }
+        }
+}
