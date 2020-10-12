@@ -17,13 +17,15 @@ extension Validator {
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
 
-        mutating func run() throws {
+        func validate() throws {
             guard
                 usePackageList || !packageUrls.isEmpty,
                 !(usePackageList && !packageUrls.isEmpty) else {
                 throw ValidationError("Specify either a list of packages or --usePackageList")
             }
+        }
 
+        mutating func run() throws {
             packageUrls = usePackageList
                 ? try fetchPackageList()
                 : packageUrls
