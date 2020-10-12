@@ -11,6 +11,7 @@ let package = Package(
                  url: "https://github.com/swift-server/async-http-client.git", from: "1.2.0"),
         .package(name: "swift-argument-parser",
                  url: "https://github.com/apple/swift-argument-parser", from: "0.2.0"),
+        .package(url: "https://github.com/JohnSundell/ShellOut.git", from: "2.3.0"),
     ],
     targets: [
         .target(name: "validator", dependencies: ["ValidatorCore"]),
@@ -19,6 +20,7 @@ let package = Package(
             dependencies: [
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                "ShellOut",
             ]),
         .testTarget(name: "ValidatorTests", dependencies: ["ValidatorCore"]),
     ]

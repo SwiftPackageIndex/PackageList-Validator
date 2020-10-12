@@ -18,4 +18,5 @@ https://github.com/swift-aws/aws-sdk-swift
 "
 
 
-$validator check-redirects $urls
+# $validator check-redirects $urls
+$validator check-dependencies $urls
