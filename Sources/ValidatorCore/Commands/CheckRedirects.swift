@@ -35,7 +35,7 @@ extension Validator {
                     case .initial:
                         print("•  \(packageURL) unchanged")
                     case .redirected(let url):
-                        print("↦  \(packageURL) -> \(url)")
+                        print("↦  \(packageURL) -> \(url.addingGitExtension())")
                 }
             }
         }

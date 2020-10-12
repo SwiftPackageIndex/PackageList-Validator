@@ -10,6 +10,11 @@ extension URL: ExpressibleByArgument {
 
 
 extension URL {
+    func addingGitExtension() -> URL {
+        guard !absoluteString.hasSuffix(".git") else { return self }
+        return appendingPathExtension("git")
+    }
+
     func deletingGitExtension() -> URL {
         guard absoluteString.hasSuffix(".git") else { return self }
         return URL(string: absoluteString.deletingGitExtension())!
