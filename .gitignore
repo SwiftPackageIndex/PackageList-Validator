@@ -1,2 +1,3 @@
 .build/
 .swiftpm
+packages.json
