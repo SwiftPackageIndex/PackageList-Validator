@@ -7,24 +7,52 @@ import NIOHTTP1
 
 extension Validator {
     struct CheckDependencies: ParsableCommand {
+        @Option(name: .shortAndLong, help: "limit number of urls to check")
+        var limit: Int?
+
+        @Option(name: .shortAndLong, help: "save changes to output file")
+        var output: String?
+
         @Argument(help: "Package urls to check")
-        var packageURLs: [URL]
+        var packageUrls: [URL] = []
 
         @Flag(name: .shortAndLong, help: "follow redirects")
         var follow = false
 
+        @Flag(name: .long, help: "check redirects of canonical package list")
+        var usePackageList = false
+
+        func validate() throws {
+            guard
+                usePackageList || !packageUrls.isEmpty,
+                !(usePackageList && !packageUrls.isEmpty) else {
+                throw ValidationError("Specify either a list of packages or --usePackageList")
+            }
+        }
+
         mutating func run() throws {
+            packageUrls = usePackageList
+                ? try fetchPackageList()
+                : packageUrls
+
+            if let limit = limit {
+                packageUrls = Array(packageUrls.prefix(limit))
+            }
+
             print("Checking dependencies ...")
             let client = HTTPClient(eventLoopGroupProvider: .createNew)
             defer { try? client.syncShutdown() }
 
-            try packageURLs.forEach { packageURL in
-                print("- \(packageURL) ...")
+            let updated = try packageUrls.flatMap { packageURL -> [URL] in
                 try findDependencies(client: client, url: packageURL, followRedirects: follow)
                     .wait()
-                    .forEach { url in
-                        print("  - \(url)")
-                }
+                    + [packageURL]
+            }
+            // FIXME: drop duplicates
+            .sorted(by: { $0.absoluteString.lowercased() < $1.absoluteString.lowercased() })
+
+            if let path = output {
+                try saveList(updated, path: path)
             }
         }
     }

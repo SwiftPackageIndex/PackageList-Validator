@@ -45,6 +45,7 @@ extension Validator {
                         return url
                 }
             }
+            // FIXME: drop duplicates
             .sorted(by: { $0.absoluteString.lowercased() < $1.absoluteString.lowercased() })
 
             if let path = output {
