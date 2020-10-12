@@ -28,11 +28,26 @@ extension Validator {
 }
 
 
+func dumpPackage(manifestURL: URL) throws -> [URL] {
+    print("manifest: \(manifestURL.absoluteString)")
+    // d/l from manifest into temp dir
+    try withTempDir { tempDir in
+        let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent("Package.swift")
+        let data = try Data(contentsOf: manifestURL)
+        guard Current.fileManager.createFile(fileURL.path, data, nil) else {
+            throw AppError.dumpPackageError("failed to save manifest \(manifestURL.absoluteString) to temp directory \(fileURL.absoluteString)")
+        }
+    }
+    // dump package in temp dir
+    // get dependency urls
+    return []
+}
+
+
 func findDependencies(client: HTTPClient, url: URL) throws -> EventLoopFuture<[URL]> {
     getManifestURL(client: client, url: url)
-        .map { manifestURL in
-            print("manifest: \(manifestURL.absoluteString)")
-            return []
+        .flatMapThrowing {
+            try dumpPackage(manifestURL: $0)
         }
 }
 
