@@ -85,8 +85,8 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
                     let content = try JSONDecoder().decode(type, from: body)
                     return eventLoop.makeSucceededFuture(content)
                 } catch {
-                    //  print(body.getString(at: 0, length: body.readableBytes) ?? "-")
-                    return eventLoop.makeFailedFuture(error)
+                    let json = body.getString(at: 0, length: body.readableBytes) ?? "(nil)"
+                    return eventLoop.makeFailedFuture(AppError.decodingError(error, json: json))
                 }
             }
     } catch {
