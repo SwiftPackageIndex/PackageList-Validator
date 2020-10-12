@@ -1,6 +1,6 @@
 import Foundation
 
 
-enum ValidatorError: Error {
+enum AppError: Error {
     case noData(URL)
 }

@@ -45,7 +45,7 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
         return client.execute(request: request)
             .flatMap { response in
                 guard let body = response.body else {
-                    return eventLoop.makeFailedFuture(ValidatorError.noData(url))
+                    return eventLoop.makeFailedFuture(AppError.noData(url))
                 }
                 do {
                     let content = try JSONDecoder().decode(type, from: body)
