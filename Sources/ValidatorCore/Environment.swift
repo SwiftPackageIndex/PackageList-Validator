@@ -3,12 +3,14 @@ import Foundation
 
 struct Environment {
     var fileManager: FileManager
+    var shell: Shell
 }
 
 
 extension Environment {
     static let live: Self = .init(
-        fileManager: .live
+        fileManager: .live,
+        shell: .live
     )
 }
 
