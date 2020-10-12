@@ -5,17 +5,17 @@ import NIO
 
 extension Validator {
     struct CheckRedirects: ParsableCommand {
-        @Argument(help: "Package urls to check")
-        var packageUrls: [URL] = []
-
-        @Flag(name: .long, help: "check redirects of canonical package list")
-        var usePackageList = false
-
         @Option(name: .shortAndLong, help: "limit number of urls to check")
         var limit: Int?
 
         @Option(name: .shortAndLong, help: "save changes to output file")
         var output: String?
+
+        @Argument(help: "Package urls to check")
+        var packageUrls: [URL] = []
+
+        @Flag(name: .long, help: "check redirects of canonical package list")
+        var usePackageList = false
 
         mutating func run() throws {
             guard
