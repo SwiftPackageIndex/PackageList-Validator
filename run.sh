@@ -1,6 +1,7 @@
 #!/bin/sh
 
-validator="xcrun swift run validator"
+#validator="xcrun swift run validator"
+validator="./validator"
 
 #https://api.github.com/repos/0xdeadp00l/bech32 \
 #https://api.github.com/repos/1024jp/GzipSwift \
