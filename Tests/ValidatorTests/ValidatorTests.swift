@@ -1,10 +1,21 @@
 import XCTest
 
+import Foundation
+@testable import ValidatorCore
+
+
 final class ValidatorTests: XCTestCase {
-    func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-        XCTAssertEqual(1 + 1, 2)
+    func test_deletingDuplicates() throws {
+        XCTAssertEqual(["a"].asURLs.deletingDuplicates().map(\.absoluteString), ["a"])
+        XCTAssertEqual(["a", "A"].asURLs.deletingDuplicates().map(\.absoluteString), ["a"])
+        XCTAssertEqual(["A", "a"].asURLs.deletingDuplicates().map(\.absoluteString), ["A"])
+        XCTAssertEqual(["A", "a", "A"].asURLs.deletingDuplicates().map(\.absoluteString), ["A"])
+    }
+}
+
+
+private extension Array where Element == String {
+    var asURLs: [URL] {
+        compactMap(URL.init(string:))
     }
 }
