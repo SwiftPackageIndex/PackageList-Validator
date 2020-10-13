@@ -166,7 +166,12 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
         return client.execute(request: request)
             .flatMap { response in
                 if case let .limited(until: reset) = rateLimitStatus(response) {
-                    return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                    let delay = UInt32(max(0, reset.timeIntervalSinceNow))
+                    print("rate limit will reset at \(reset) (in \(delay)s)")
+                    print("sleeping until then ...")
+                    sleep(delay)
+                    return fetch(T.self, client: client, url: url)
+//                    return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
                 }
                 guard let body = response.body else {
                     return eventLoop.makeFailedFuture(AppError.noData(url))
