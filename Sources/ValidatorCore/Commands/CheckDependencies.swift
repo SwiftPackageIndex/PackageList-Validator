@@ -81,8 +81,8 @@ struct Package: Decodable {
 }
 
 
-func dumpPackage(manifestURL: URL) throws -> [URL] {
-    try withTempDir { tempDir -> [URL] in
+func dumpPackage(manifestURL: URL) throws -> Package {
+    try withTempDir { tempDir in
         let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent("Package.swift")
         let data = try Data(contentsOf: manifestURL)
         guard Current.fileManager.createFile(fileURL.path, data, nil) else {
@@ -92,8 +92,7 @@ func dumpPackage(manifestURL: URL) throws -> [URL] {
                 .data(using: .utf8) else {
             throw AppError.dumpPackageError("package dump did not return data")
         }
-        let pkg = try JSONDecoder().decode(Package.self, from: pkgJSON)
-        return pkg.dependencies.map(\.url)
+        return try JSONDecoder().decode(Package.self, from: pkgJSON)
     }
 }
 
@@ -103,6 +102,10 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
         .flatMapThrowing {
             try dumpPackage(manifestURL: $0)
         }
+        .map { $0.dependencies
+            .filter { !$0.url.isFileURL }
+            .map { $0.url.addingGitExtension() }
+        }
         .flatMap { urls in
             let el = client.eventLoopGroup.next()
             let req = urls.map { url -> EventLoopFuture<URL> in
@@ -111,13 +114,17 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
                                               for: url).map(\.url)
                     : el.makeSucceededFuture(url)
             }
-            if !urls.isEmpty {
-                print("Dependencies for \(url.absoluteString)")
-                urls.forEach {
-                    print("  - \($0.absoluteString)")
-                }
-            }
             return EventLoopFuture.whenAllSucceed(req, on: el)
+                // FIXME: temporary
+                .map { urls in
+                    if !urls.isEmpty {
+                        print("Dependencies for \(url.absoluteString)")
+                        urls.forEach {
+                            print("  - \($0.absoluteString)")
+                        }
+                    }
+                    return urls
+                }
         }
 }
 
