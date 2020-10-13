@@ -103,7 +103,7 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
             try dumpPackage(manifestURL: $0)
         }
         .map { $0.dependencies
-            .filter { !$0.url.isFileURL }
+            .filter { $0.url.scheme == "https" }
             .map { $0.url.addingGitExtension() }
         }
         .flatMap { urls in
@@ -115,7 +115,6 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
                     : el.makeSucceededFuture(url)
             }
             return EventLoopFuture.whenAllSucceed(req, on: el)
-                // FIXME: temporary
                 .map { urls in
                     if !urls.isEmpty {
                         print("Dependencies for \(url.absoluteString)")
