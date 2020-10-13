@@ -111,6 +111,12 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
                                               for: url).map(\.url)
                     : el.makeSucceededFuture(url)
             }
+            if !urls.isEmpty {
+                print("Dependencies for \(url.absoluteString)")
+                urls.forEach {
+                    print("  - \($0.absoluteString)")
+                }
+            }
             return EventLoopFuture.whenAllSucceed(req, on: el)
         }
 }
