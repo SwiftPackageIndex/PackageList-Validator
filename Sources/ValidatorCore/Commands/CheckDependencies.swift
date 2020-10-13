@@ -128,14 +128,29 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
 }
 
 
-func isRateLimited(_ response: HTTPClient.Response) -> Bool {
+func rateLimitStatus(_ response: HTTPClient.Response) -> RateLimitStatus {
     if
         response.status == .forbidden,
-        let header = response.headers.first(name: "X-RateLimit-Remaining"),
-        let limit = Int(header) {
-        return limit == 0
+        let remaining = response.headers.first(name: "X-RateLimit-Remaining")
+            .flatMap(Int.init),
+        let reset = response.headers.first(name: "X-RateLimit-Reset")
+            .flatMap(TimeInterval.init)
+            .flatMap(Date.init(timeIntervalSince1970:))
+         {
+        if remaining == 0 {
+            return .limited(until: reset)
+        } else {
+            return .unknown
+        }
     }
-    return false
+    return .ok
+}
+
+
+enum RateLimitStatus {
+    case limited(until: Date)
+    case ok
+    case unknown
 }
 
 
@@ -150,8 +165,8 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
         let request = try HTTPClient.Request(url: url, method: .GET, headers: headers)
         return client.execute(request: request)
             .flatMap { response in
-                guard !isRateLimited(response) else {
-                    return eventLoop.makeFailedFuture(AppError.rateLimited)
+                if case let .limited(until: reset) = rateLimitStatus(response) {
+                    return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
                 }
                 guard let body = response.body else {
                     return eventLoop.makeFailedFuture(AppError.noData(url))
