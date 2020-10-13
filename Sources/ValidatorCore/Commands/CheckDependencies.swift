@@ -64,7 +64,7 @@ extension Validator {
 }
 
 
-struct Repository: Decodable {
+struct Repository: Codable {
     let default_branch: String
     let fork: Bool
 }
@@ -122,9 +122,19 @@ func fetchRepository(client: HTTPClient, url: URL) -> EventLoopFuture<Repository
 }
 
 
+var repositoryCache = Cache<Repository>()
+
+
 func fetchRepository(client: HTTPClient, owner: String, repository: String) -> EventLoopFuture<Repository> {
     let url = URL(string: "https://api.github.com/repos/\(owner)/\(repository)")!
+    if let cached = repositoryCache[Cache.Key(string: url.absoluteString)] {
+        return client.eventLoopGroup.next().makeSucceededFuture(cached)
+    }
     return fetch(Repository.self, client: client, url: url)
+        .map { repo in
+            repositoryCache[Cache.Key(string: url.absoluteString)] = repo
+            return repo
+        }
 }
 
 
