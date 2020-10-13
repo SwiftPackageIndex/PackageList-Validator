@@ -63,6 +63,12 @@ extension Validator {
 }
 
 
+struct Repository: Decodable {
+    let default_branch: String
+    let fork: Bool
+}
+
+
 struct Product: Decodable {
     let name: String
 }
@@ -97,8 +103,51 @@ func dumpPackage(manifestURL: URL) throws -> Package {
 }
 
 
+func resolvePackageRedirects(eventLoop: EventLoop, urls: [URL], followRedirects: Bool = false) -> EventLoopFuture<[URL]> {
+    let req = urls.map { url -> EventLoopFuture<URL> in
+        followRedirects
+            ? resolvePackageRedirects(eventLoop: eventLoop,
+                                      for: url).map(\.url)
+            : eventLoop.makeSucceededFuture(url)
+    }
+    return EventLoopFuture.whenAllSucceed(req, on: eventLoop)
+}
+
+
+func fetchRepository(client: HTTPClient, url: URL) -> EventLoopFuture<Repository> {
+    let repository = url.deletingPathExtension().lastPathComponent
+    let owner = url.deletingLastPathComponent().lastPathComponent
+    return fetchRepository(client: client, owner: owner, repository: repository)
+}
+
+
+func fetchRepository(client: HTTPClient, owner: String, repository: String) -> EventLoopFuture<Repository> {
+    let url = URL(string: "https://api.github.com/repos/\(owner)/\(repository)")!
+    return fetch(Repository.self, client: client, url: url)
+}
+
+
+func fetchRepositories(client: HTTPClient, urls: [URL]) -> EventLoopFuture<[(URL, Repository)]> {
+    let req = urls.map { url in
+        fetchRepository(client: client, url: url)
+            .map { (url, $0) }
+    }
+    return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
+}
+
+
+func dropForks(client: HTTPClient, urls: [URL]) -> EventLoopFuture<[URL]> {
+    fetchRepositories(client: client, urls: urls)
+        .map { pairs in
+            pairs.filter { (url, repo) in !repo.fork }
+            .map { (url, repo) in url }
+        }
+}
+
+
 func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = false) throws -> EventLoopFuture<[URL]> {
-    getManifestURL(client: client, url: url)
+    let el = client.eventLoopGroup.next()
+    return getManifestURL(client: client, url: url)
         .flatMapThrowing {
             try dumpPackage(manifestURL: $0)
         }
@@ -106,24 +155,18 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
             .filter { $0.url.scheme == "https" }
             .map { $0.url.addingGitExtension() }
         }
-        .flatMap { urls in
-            let el = client.eventLoopGroup.next()
-            let req = urls.map { url -> EventLoopFuture<URL> in
-                followRedirects
-                    ? resolvePackageRedirects(eventLoop: client.eventLoopGroup.next(),
-                                              for: url).map(\.url)
-                    : el.makeSucceededFuture(url)
-            }
-            return EventLoopFuture.whenAllSucceed(req, on: el)
-                .map { urls in
-                    if !urls.isEmpty {
-                        print("Dependencies for \(url.absoluteString)")
-                        urls.forEach {
-                            print("  - \($0.absoluteString)")
-                        }
-                    }
-                    return urls
+        .flatMap { resolvePackageRedirects(eventLoop: el,
+                                           urls: $0,
+                                           followRedirects: followRedirects) }
+        .flatMap { dropForks(client: client, urls: $0) }
+        .map { urls in
+            if !urls.isEmpty {
+                print("Dependencies for \(url.absoluteString)")
+                urls.forEach {
+                    print("  - \($0.absoluteString)")
                 }
+            }
+            return urls
         }
 }
 
@@ -190,21 +233,11 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
 }
 
 
-func getDefaultBranch(client: HTTPClient, owner: String, repository: String) -> EventLoopFuture<String> {
-    let url = URL(string: "https://api.github.com/repos/\(owner)/\(repository)")!
-
-    struct Repository: Decodable {
-        let default_branch: String
-    }
-    return fetch(Repository.self, client: client, url: url)
-        .map(\.default_branch)
-}
-
-
 func getManifestURL(client: HTTPClient, url: URL) -> EventLoopFuture<URL> {
     let repository = url.deletingPathExtension().lastPathComponent
     let owner = url.deletingLastPathComponent().lastPathComponent
-    return getDefaultBranch(client: client, owner: owner, repository: repository)
+    return fetchRepository(client: client, owner: owner, repository: repository)
+        .map(\.default_branch)
         .map { defaultBranch in
             URL(string: "https://raw.githubusercontent.com/\(owner)/\(repository)/\(defaultBranch)/Package.swift")!
         }
