@@ -3,10 +3,21 @@ import Foundation
 import NIO
 
 
+enum InputSource {
+    case file(String)
+    case invalid
+    case packageList
+    case packageURLs([PackageURL])
+}
+
+
 extension Validator {
     struct CheckRedirects: ParsableCommand {
         @Option(name: .shortAndLong, help: "limit number of urls to check")
         var limit: Int?
+
+        @Option(name: .shortAndLong, help: "read input from file")
+        var input: String?
 
         @Option(name: .shortAndLong, help: "save changes to output file")
         var output: String?
@@ -17,11 +28,22 @@ extension Validator {
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
 
+        var inputSource: InputSource {
+            switch (input, usePackageList, packageUrls.count) {
+                case (.some(let fname), false, 0):
+                    return .file(fname)
+                case (.none, true, 0):
+                    return .packageList
+                case (.none, false, 1...):
+                    return .packageURLs(packageUrls)
+                default:
+                    return .invalid
+            }
+        }
+
         func validate() throws {
-            guard
-                usePackageList || !packageUrls.isEmpty,
-                !(usePackageList && !packageUrls.isEmpty) else {
-                throw ValidationError("Specify either a list of packages or --usePackageList")
+            if case .invalid = inputSource {
+                throw ValidationError("Specify either an input file (--input), --usePackageList, or a list of package URLs")
             }
         }
 
