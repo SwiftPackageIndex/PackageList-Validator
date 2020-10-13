@@ -6,4 +6,5 @@ enum AppError: Error {
     case dumpPackageError(String)
     case ioError(String)
     case noData(URL)
+    case rateLimited
 }

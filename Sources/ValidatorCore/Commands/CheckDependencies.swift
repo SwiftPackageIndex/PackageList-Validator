@@ -129,6 +129,17 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
 }
 
 
+func isRateLimited(_ response: HTTPClient.Response) -> Bool {
+    if
+        response.status == .forbidden,
+        let header = response.headers.first(name: "X-RateLimit-Remaining"),
+        let limit = Int(header) {
+        return limit == 0
+    }
+    return false
+}
+
+
 func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventLoopFuture<T> {
     let eventLoop = client.eventLoopGroup.next()
     let headers = HTTPHeaders([
@@ -140,6 +151,9 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
         let request = try HTTPClient.Request(url: url, method: .GET, headers: headers)
         return client.execute(request: request)
             .flatMap { response in
+                guard !isRateLimited(response) else {
+                    return eventLoop.makeFailedFuture(AppError.rateLimited)
+                }
                 guard let body = response.body else {
                     return eventLoop.makeFailedFuture(AppError.noData(url))
                 }
