@@ -31,6 +31,10 @@ extension Validator {
         }
 
         mutating func run() throws {
+            if Current.githubToken() == nil {
+                print("Warning: Using anonymous authentication -- you will quickly run into rate limiting issues\n")
+            }
+
             packageUrls = usePackageList
                 ? try fetchPackageList()
                 : packageUrls
@@ -114,7 +118,11 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
 
 func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventLoopFuture<T> {
     let eventLoop = client.eventLoopGroup.next()
-    let headers = HTTPHeaders([("User-Agent", "SPI-Validator"),])
+    let headers = HTTPHeaders([
+        ("User-Agent", "SPI-Validator"),
+        Current.githubToken().map { ("Authorization", "Bearer \($0)") }
+    ].compactMap({ $0 }))
+
     do {
         let request = try HTTPClient.Request(url: url, method: .GET, headers: headers)
         return client.execute(request: request)

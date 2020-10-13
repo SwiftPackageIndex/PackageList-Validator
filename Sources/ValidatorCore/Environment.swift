@@ -3,6 +3,7 @@ import Foundation
 
 struct Environment {
     var fileManager: FileManager
+    var githubToken: () -> String?
     var shell: Shell
 }
 
@@ -10,13 +11,13 @@ struct Environment {
 extension Environment {
     static let live: Self = .init(
         fileManager: .live,
+        githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
         shell: .live
     )
 }
 
 
 struct FileManager {
-//    var contents: (_ atPath: String) -> Data?
     var createDirectory: (_ path: String,
                           _ withIntermediateDirectories: Bool,
                           _ attributes: [FileAttributeKey : Any]?) throws -> Void
@@ -28,7 +29,6 @@ struct FileManager {
     var temporaryDirectory: () -> URL
 
     static let live: Self = .init(
-//        contents: Foundation.FileManager.default.contents(atPath:),
         createDirectory: Foundation.FileManager.default
             .createDirectory(atPath:withIntermediateDirectories:attributes:),
         createFile: Foundation.FileManager.default.createFile(atPath:contents:attributes:),
