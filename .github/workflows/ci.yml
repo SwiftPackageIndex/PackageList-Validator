@@ -16,9 +16,13 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Run nightly script
-      # run: xcrun swift nightly.swift
-      run: ./run.sh
+    - name: Check redirects
+      run: ./run-redirects.sh
       env:
         DEVELOPER_DIR: /Applications/Xcode_12.app
-        GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Check dependencies
+      run: ./run-dependencies.sh
+      env:
+        DEVELOPER_DIR: /Applications/Xcode_12.app
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
