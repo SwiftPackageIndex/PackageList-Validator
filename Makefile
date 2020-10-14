@@ -1,4 +1,4 @@
-XCODE="/Applications/Xcode_12.0.app"
+XCODE="/Applications/Xcode_12.app"
 
 install:
 	env DEVELOPER_DIR=$(XCODE) xcrun swift build -c release

@@ -45,13 +45,12 @@ extension Validator {
             }
 
             print("Checking dependencies ...")
-            let client = HTTPClient(eventLoopGroupProvider: .createNew)
-            defer { try? client.syncShutdown() }
 
-            let updated = try packageUrls.flatMap { packageURL -> [URL] in
-                try findDependencies(client: client, url: packageURL, followRedirects: follow)
-                    .wait()
-                    + [packageURL]
+            let updated = try packageUrls.flatMap { packageURL in
+                try [packageURL] +
+                    findDependencies(packageURL: packageURL,
+                                     followRedirects: follow,
+                                     waitIfRateLimited: true)
             }
             .deletingDuplicates()
             .sorted(by: { $0.absoluteString.lowercased() < $1.absoluteString.lowercased() })
@@ -156,6 +155,32 @@ func dropForks(client: HTTPClient, urls: [URL]) -> EventLoopFuture<[URL]> {
 }
 
 
+func findDependencies(packageURL: URL, followRedirects: Bool, waitIfRateLimited: Bool) throws -> [URL] {
+    do {
+        let client = HTTPClient(eventLoopGroupProvider: .createNew)
+        defer { try? client.syncShutdown() }
+        return try findDependencies(client: client,
+                                    url: packageURL,
+                                    followRedirects: followRedirects).wait()
+    } catch AppError.rateLimited(until: let reset) where waitIfRateLimited {
+        print("rate limit will reset at \(reset)")
+        let delay = UInt32(max(0, reset.timeIntervalSinceNow) + 1)
+        print("sleeping for \(delay) seconds ...")
+        fflush(stdout)
+        sleep(delay)
+
+        // Create a new client so we don't run into HTTPClientError.remoteConnectionClosed
+        // when the delay exceeds 60s. (We could try and create a custom config with
+        // higher maximumAllowedIdleTimeInConnectionPool but it's quite fiddly.
+        let client = HTTPClient(eventLoopGroupProvider: .createNew)
+        defer { try? client.syncShutdown() }
+        return try findDependencies(client: client,
+                                    url: packageURL,
+                                    followRedirects: followRedirects).wait()
+    }
+}
+
+
 func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = false) throws -> EventLoopFuture<[URL]> {
     let el = client.eventLoopGroup.next()
     return getManifestURL(client: client, url: url)
@@ -220,13 +245,7 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
         return client.execute(request: request)
             .flatMap { response in
                 if case let .limited(until: reset) = rateLimitStatus(response) {
-                    let delay = UInt32(max(0, reset.timeIntervalSinceNow) + 1)
-                    print("rate limit will reset at \(reset) (in \(delay)s)")
-                    print("sleeping until then ...")
-                    fflush(stdout)
-                    sleep(delay)
-                    return fetch(T.self, client: client, url: url)
-                    //  return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                    return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
                 }
                 guard let body = response.body else {
                     return eventLoop.makeFailedFuture(AppError.noData(url))
