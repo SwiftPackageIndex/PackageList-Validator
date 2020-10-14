@@ -3,14 +3,6 @@ import Foundation
 import NIO
 
 
-enum InputSource {
-    case file(String)
-    case invalid
-    case packageList
-    case packageURLs([PackageURL])
-}
-
-
 extension Validator {
     struct CheckRedirects: ParsableCommand {
         @Option(name: .shortAndLong, help: "limit number of urls to check")
@@ -48,17 +40,15 @@ extension Validator {
         }
 
         mutating func run() throws {
-            packageUrls = usePackageList
-                ? try Github.packageList()
-                : packageUrls
+            let inputURLs = try inputSource.packageURLs()
+            let prefix = limit ?? inputURLs.count
 
-            if let limit = limit {
-                packageUrls = Array(packageUrls.prefix(limit))
-            }
+            print("Checking for redirects (\(prefix) packages) ...")
 
-            print("Checking for redirects (\(packageUrls.count) packages) ...")
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-            let updated = try packageUrls.map { packageURL in
+            let updated = try inputURLs
+                .prefix(prefix)
+                .map { packageURL in
                 switch try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL).wait() {
                     case .initial:
                         return packageURL
