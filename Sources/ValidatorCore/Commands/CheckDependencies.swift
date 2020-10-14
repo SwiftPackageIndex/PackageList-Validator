@@ -11,6 +11,9 @@ extension Validator {
         @Option(name: .shortAndLong, help: "limit number of urls to check")
         var limit: Int?
 
+        @Option(name: .shortAndLong, help: "read input from file")
+        var input: String?
+
         @Option(name: .shortAndLong, help: "save changes to output file")
         var output: String?
 
@@ -23,11 +26,22 @@ extension Validator {
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
 
+        var inputSource: InputSource {
+            switch (input, usePackageList, packageUrls.count) {
+                case (.some(let fname), false, 0):
+                    return .file(fname)
+                case (.none, true, 0):
+                    return .packageList
+                case (.none, false, 1...):
+                    return .packageURLs(packageUrls)
+                default:
+                    return .invalid
+            }
+        }
+
         func validate() throws {
-            guard
-                usePackageList || !packageUrls.isEmpty,
-                !(usePackageList && !packageUrls.isEmpty) else {
-                throw ValidationError("Specify either a list of packages or --usePackageList")
+            if case .invalid = inputSource {
+                throw ValidationError("Specify either an input file (--input), --usePackageList, or a list of package URLs")
             }
         }
 
@@ -36,24 +50,21 @@ extension Validator {
                 print("Warning: Using anonymous authentication -- you will quickly run into rate limiting issues\n")
             }
 
-            packageUrls = usePackageList
-                ? try Github.packageList()
-                : packageUrls
+            let inputURLs = try inputSource.packageURLs()
+            let prefix = limit ?? inputURLs.count
 
-            if let limit = limit {
-                packageUrls = Array(packageUrls.prefix(limit))
-            }
+            print("Checking dependencies (\(prefix) packages) ...")
 
-            print("Checking dependencies ...")
-
-            let updated = try packageUrls.flatMap { packageURL in
-                try [packageURL] +
-                    findDependencies(packageURL: packageURL,
-                                     followRedirects: follow,
-                                     waitIfRateLimited: true)
-            }
-            .deletingDuplicates()
-            .sorted(by: { $0.lowercased() < $1.lowercased() })
+            let updated = try inputURLs
+                .prefix(prefix)
+                .flatMap { packageURL in
+                    try [packageURL] +
+                        findDependencies(packageURL: packageURL,
+                                         followRedirects: follow,
+                                         waitIfRateLimited: true)
+                }
+                .deletingDuplicates()
+                .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)
