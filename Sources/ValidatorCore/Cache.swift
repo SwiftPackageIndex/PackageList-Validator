@@ -14,7 +14,7 @@ struct Cache<T: Codable> {
     subscript(key: Key<T>) -> T? {
         get {
             if let data = data[key] {
-                print("Cache hit: \(key)")
+                // print("Cache hit: \(key)")
                 return try? JSONDecoder().decode(T.self, from: data)
             }
             return nil

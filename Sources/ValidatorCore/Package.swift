@@ -52,15 +52,22 @@ extension Package {
     enum Manifest {}
     typealias ManifestURL = Tagged<Manifest, URL>
 
-//    static var manifestURLCache = Cache<ManifestURL>()
+    static var manifestURLCache = Cache<ManifestURL>()
 
-    static func getManifestURL(client: HTTPClient, url: PackageURL) -> EventLoopFuture<ManifestURL> {
-        return Github.fetchRepository(client: client, owner: url.owner, repository: url.repository)
+    static func getManifestURL(client: HTTPClient, packageURL: PackageURL) -> EventLoopFuture<ManifestURL> {
+        if let cached = manifestURLCache[Cache.Key(string: packageURL.absoluteString)] {
+            return client.eventLoopGroup.next().makeSucceededFuture(cached)
+        }
+        return Github.fetchRepository(client: client, owner: packageURL.owner, repository: packageURL.repository)
             .map(\.default_branch)
             .map { defaultBranch in
-                URL(string: "https://raw.githubusercontent.com/\(url.owner)/\(url.repository)/\(defaultBranch)/Package.swift")!
+                URL(string: "https://raw.githubusercontent.com/\(packageURL.owner)/\(packageURL.repository)/\(defaultBranch)/Package.swift")!
             }
             .map(ManifestURL.init(rawValue:))
+            .map { url in
+                manifestURLCache[Cache.Key(string: packageURL.absoluteString)] = url
+                return url
+            }
     }
 
 }

@@ -86,7 +86,7 @@ func dropForks(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[Packa
 func dropNoProducts(client: HTTPClient, packageURLs: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
     let req = packageURLs
         .map { packageURL in
-            Package.getManifestURL(client: client, url: packageURL)
+            Package.getManifestURL(client: client, packageURL: packageURL)
                 .map { (packageURL, $0) }
         }
     return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
@@ -128,7 +128,7 @@ func findDependencies(packageURL: PackageURL, followRedirects: Bool, waitIfRateL
 
 func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool = false) throws -> EventLoopFuture<[PackageURL]> {
     let el = client.eventLoopGroup.next()
-    return Package.getManifestURL(client: client, url: url)
+    return Package.getManifestURL(client: client, packageURL: url)
         .flatMapThrowing {
             try Package.decode(from: $0)
         }
