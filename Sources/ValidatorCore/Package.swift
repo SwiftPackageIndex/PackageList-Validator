@@ -22,7 +22,9 @@ struct Package: Decodable {
 extension Package {
 
     static func decode(from manifestURL: URL) throws -> Package {
-        try withTempDir { tempDir in
+        assert(manifestURL.absoluteString.hasSuffix("Package.swift"),
+               "manifest URL must end with 'Package.swift', was \(manifestURL.absoluteString)")
+        return try withTempDir { tempDir in
             let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent("Package.swift")
             let data = try Data(contentsOf: manifestURL)
             guard Current.fileManager.createFile(fileURL.path, data, nil) else {
