@@ -63,31 +63,7 @@ extension Validator {
 }
 
 
-struct Repository: Codable {
-    let default_branch: String
-    let fork: Bool
-}
-
-
-struct Product: Decodable {
-    let name: String
-}
-
-
-struct Dependency: Decodable, Hashable {
-    let name: String
-    let url: URL
-}
-
-
-struct Package: Decodable {
-    let name: String
-    let products: [Product]
-    let dependencies: [Dependency]
-}
-
-
-func dumpPackage(manifestURL: URL) throws -> Package {
+func dumpPackage(manifestURL: URL) throws -> Github.Package {
     try withTempDir { tempDir in
         let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent("Package.swift")
         let data = try Data(contentsOf: manifestURL)
@@ -98,7 +74,7 @@ func dumpPackage(manifestURL: URL) throws -> Package {
                 .data(using: .utf8) else {
             throw AppError.dumpPackageError("package dump did not return data")
         }
-        return try JSONDecoder().decode(Package.self, from: pkgJSON)
+        return try JSONDecoder().decode(Github.Package.self, from: pkgJSON)
     }
 }
 
@@ -114,40 +90,8 @@ func resolvePackageRedirects(eventLoop: EventLoop, urls: [URL], followRedirects:
 }
 
 
-func fetchRepository(client: HTTPClient, url: URL) -> EventLoopFuture<Repository> {
-    let repository = url.deletingPathExtension().lastPathComponent
-    let owner = url.deletingLastPathComponent().lastPathComponent
-    return fetchRepository(client: client, owner: owner, repository: repository)
-}
-
-
-var repositoryCache = Cache<Repository>()
-
-
-func fetchRepository(client: HTTPClient, owner: String, repository: String) -> EventLoopFuture<Repository> {
-    let url = URL(string: "https://api.github.com/repos/\(owner)/\(repository)")!
-    if let cached = repositoryCache[Cache.Key(string: url.absoluteString)] {
-        return client.eventLoopGroup.next().makeSucceededFuture(cached)
-    }
-    return fetch(Repository.self, client: client, url: url)
-        .map { repo in
-            repositoryCache[Cache.Key(string: url.absoluteString)] = repo
-            return repo
-        }
-}
-
-
-func fetchRepositories(client: HTTPClient, urls: [URL]) -> EventLoopFuture<[(URL, Repository)]> {
-    let req = urls.map { url in
-        fetchRepository(client: client, url: url)
-            .map { (url, $0) }
-    }
-    return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
-}
-
-
 func dropForks(client: HTTPClient, urls: [URL]) -> EventLoopFuture<[URL]> {
-    fetchRepositories(client: client, urls: urls)
+    Github.fetchRepositories(client: client, urls: urls)
         .map { pairs in
             pairs.filter { (url, repo) in !repo.fork }
             .map { (url, repo) in url }
@@ -207,32 +151,6 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
 }
 
 
-func rateLimitStatus(_ response: HTTPClient.Response) -> RateLimitStatus {
-    if
-        response.status == .forbidden,
-        let remaining = response.headers.first(name: "X-RateLimit-Remaining")
-            .flatMap(Int.init),
-        let reset = response.headers.first(name: "X-RateLimit-Reset")
-            .flatMap(TimeInterval.init)
-            .flatMap(Date.init(timeIntervalSince1970:))
-         {
-        if remaining == 0 {
-            return .limited(until: reset)
-        } else {
-            return .unknown
-        }
-    }
-    return .ok
-}
-
-
-enum RateLimitStatus {
-    case limited(until: Date)
-    case ok
-    case unknown
-}
-
-
 func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventLoopFuture<T> {
     let eventLoop = client.eventLoopGroup.next()
     let headers = HTTPHeaders([
@@ -244,7 +162,7 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
         let request = try HTTPClient.Request(url: url, method: .GET, headers: headers)
         return client.execute(request: request)
             .flatMap { response in
-                if case let .limited(until: reset) = rateLimitStatus(response) {
+                if case let .limited(until: reset) = Github.rateLimitStatus(response) {
                     return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
                 }
                 guard let body = response.body else {
@@ -267,7 +185,7 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
 func getManifestURL(client: HTTPClient, url: URL) -> EventLoopFuture<URL> {
     let repository = url.deletingPathExtension().lastPathComponent
     let owner = url.deletingLastPathComponent().lastPathComponent
-    return fetchRepository(client: client, owner: owner, repository: repository)
+    return Github.fetchRepository(client: client, owner: owner, repository: repository)
         .map(\.default_branch)
         .map { defaultBranch in
             URL(string: "https://raw.githubusercontent.com/\(owner)/\(repository)/\(defaultBranch)/Package.swift")!
