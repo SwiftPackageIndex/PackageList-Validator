@@ -1,4 +1,6 @@
+import AsyncHTTPClient
 import Foundation
+import NIO
 
 
 struct Package: Decodable {
@@ -32,6 +34,17 @@ extension Package {
             }
             return try JSONDecoder().decode(Package.self, from: pkgJSON)
         }
+    }
+
+
+    static func getManifestURL(client: HTTPClient, url: URL) -> EventLoopFuture<URL> {
+        let repository = url.deletingPathExtension().lastPathComponent
+        let owner = url.deletingLastPathComponent().lastPathComponent
+        return Github.fetchRepository(client: client, owner: owner, repository: repository)
+            .map(\.default_branch)
+            .map { defaultBranch in
+                URL(string: "https://raw.githubusercontent.com/\(owner)/\(repository)/\(defaultBranch)/Package.swift")!
+            }
     }
 
 }

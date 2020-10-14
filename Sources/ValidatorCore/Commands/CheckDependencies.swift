@@ -111,7 +111,7 @@ func findDependencies(packageURL: URL, followRedirects: Bool, waitIfRateLimited:
 
 func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = false) throws -> EventLoopFuture<[URL]> {
     let el = client.eventLoopGroup.next()
-    return getManifestURL(client: client, url: url)
+    return Package.getManifestURL(client: client, url: url)
         .flatMapThrowing {
             try Package.decode(from: $0)
         }
@@ -163,15 +163,4 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
     } catch {
         return eventLoop.makeFailedFuture(error)
     }
-}
-
-
-func getManifestURL(client: HTTPClient, url: URL) -> EventLoopFuture<URL> {
-    let repository = url.deletingPathExtension().lastPathComponent
-    let owner = url.deletingLastPathComponent().lastPathComponent
-    return Github.fetchRepository(client: client, owner: owner, repository: repository)
-        .map(\.default_branch)
-        .map { defaultBranch in
-            URL(string: "https://raw.githubusercontent.com/\(owner)/\(repository)/\(defaultBranch)/Package.swift")!
-        }
 }
