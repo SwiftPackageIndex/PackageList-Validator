@@ -49,16 +49,17 @@ extension Validator {
             let updated = try inputURLs
                 .prefix(prefix)
                 .map { packageURL in
-                switch try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL).wait() {
-                    case .initial:
-                        return packageURL
-                    case .redirected(let url):
-                        print("↦  \(packageURL) -> \(url)")
-                        return url
+                    switch try resolvePackageRedirects(eventLoop: elg.next(),
+                                                       for: packageURL).wait() {
+                        case .initial:
+                            return packageURL
+                        case .redirected(let url):
+                            print("↦  \(packageURL) -> \(url)")
+                            return url
+                    }
                 }
-            }
-            .deletingDuplicates()
-            .sorted(by: { $0.lowercased() < $1.lowercased() })
+                .deletingDuplicates()
+                .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)
