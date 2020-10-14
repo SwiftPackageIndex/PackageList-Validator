@@ -3,16 +3,16 @@ import Foundation
 import NIO
 
 
-struct Package: Decodable {
+struct Package: Codable {
     let name: String
     let products: [Product]
     let dependencies: [Dependency]
 
-    struct Product: Decodable {
+    struct Product: Codable {
         let name: String
     }
 
-    struct Dependency: Decodable, Hashable {
+    struct Dependency: Codable, Hashable {
         let name: String
         let url: URL
     }
@@ -21,9 +21,14 @@ struct Package: Decodable {
 
 extension Package {
 
+    static var packageDumpCache = Cache<Package>()
+
     static func decode(from manifestURL: URL) throws -> Package {
         assert(manifestURL.absoluteString.hasSuffix("Package.swift"),
                "manifest URL must end with 'Package.swift', was \(manifestURL.absoluteString)")
+        if let cached = packageDumpCache[Cache.Key(string: manifestURL.absoluteString)] {
+            return cached
+        }
         return try withTempDir { tempDir in
             let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent("Package.swift")
             let data = try Data(contentsOf: manifestURL)
@@ -34,7 +39,9 @@ extension Package {
                     .data(using: .utf8) else {
                 throw AppError.dumpPackageError("package dump did not return data")
             }
-            return try JSONDecoder().decode(Package.self, from: pkgJSON)
+            let pkg = try JSONDecoder().decode(Package.self, from: pkgJSON)
+            packageDumpCache[Cache.Key(string: manifestURL.absoluteString)] = pkg
+            return pkg
         }
     }
 
