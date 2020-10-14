@@ -15,7 +15,7 @@ extension Validator {
         var output: String?
 
         @Argument(help: "Package urls to check")
-        var packageUrls: [URL] = []
+        var packageUrls: [PackageURL] = []
 
         @Flag(name: .shortAndLong, help: "follow redirects")
         var follow = false
@@ -53,7 +53,7 @@ extension Validator {
                                      waitIfRateLimited: true)
             }
             .deletingDuplicates()
-            .sorted(by: { $0.absoluteString.lowercased() < $1.absoluteString.lowercased() })
+            .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)
@@ -63,8 +63,8 @@ extension Validator {
 }
 
 
-func resolvePackageRedirects(eventLoop: EventLoop, urls: [URL], followRedirects: Bool = false) -> EventLoopFuture<[URL]> {
-    let req = urls.map { url -> EventLoopFuture<URL> in
+func resolvePackageRedirects(eventLoop: EventLoop, urls: [PackageURL], followRedirects: Bool = false) -> EventLoopFuture<[PackageURL]> {
+    let req = urls.map { url -> EventLoopFuture<PackageURL> in
         followRedirects
             ? resolvePackageRedirects(eventLoop: eventLoop,
                                       for: url).map(\.url)
@@ -74,7 +74,7 @@ func resolvePackageRedirects(eventLoop: EventLoop, urls: [URL], followRedirects:
 }
 
 
-func dropForks(client: HTTPClient, urls: [URL]) -> EventLoopFuture<[URL]> {
+func dropForks(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
     Github.fetchRepositories(client: client, urls: urls)
         .map { pairs in
             pairs.filter { (url, repo) in !repo.fork }
@@ -83,20 +83,24 @@ func dropForks(client: HTTPClient, urls: [URL]) -> EventLoopFuture<[URL]> {
 }
 
 
-func dropNoProducts(client: HTTPClient, packageURLs: [URL]) -> EventLoopFuture<[URL]> {
+func dropNoProducts(client: HTTPClient, packageURLs: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
     let req = packageURLs
-        .map { Package.getManifestURL(client: client, url: $0)}
+        .map { packageURL in
+            Package.getManifestURL(client: client, url: packageURL)
+                .map { (packageURL, $0) }
+        }
     return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
-        .map {
-            $0.filter {
-                guard let pkg = try? Package.decode(from: $0) else { return false }
+        .map { pairs in
+            pairs.filter { (_, manifestURL) in
+                guard let pkg = try? Package.decode(from: manifestURL) else { return false }
                 return !pkg.products.isEmpty
             }
+            .map { (packageURL, _) in packageURL }
         }
 }
 
 
-func findDependencies(packageURL: URL, followRedirects: Bool, waitIfRateLimited: Bool) throws -> [URL] {
+func findDependencies(packageURL: PackageURL, followRedirects: Bool, waitIfRateLimited: Bool) throws -> [PackageURL] {
     do {
         let client = HTTPClient(eventLoopGroupProvider: .createNew)
         defer { try? client.syncShutdown() }
@@ -122,7 +126,7 @@ func findDependencies(packageURL: URL, followRedirects: Bool, waitIfRateLimited:
 }
 
 
-func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = false) throws -> EventLoopFuture<[URL]> {
+func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool = false) throws -> EventLoopFuture<[PackageURL]> {
     let el = client.eventLoopGroup.next()
     return Package.getManifestURL(client: client, url: url)
         .flatMapThrowing {

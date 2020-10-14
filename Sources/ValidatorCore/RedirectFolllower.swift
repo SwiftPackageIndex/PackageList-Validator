@@ -7,11 +7,11 @@ class RedirectFollower: NSObject, URLSessionDataDelegate {
     var session: URLSession?
     var task: URLSessionDataTask?
 
-    init(initialURL: URL, completion: @escaping (Redirect) -> Void) {
+    init(initialURL: PackageURL, completion: @escaping (Redirect) -> Void) {
         self.status = .initial(initialURL)
         super.init()
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        self.task = session?.dataTask(with: initialURL) { [weak self] (_, response, error) in
+        self.task = session?.dataTask(with: initialURL.rawValue) { [weak self] (_, response, error) in
             completion(self!.status)
         }
         self.task?.resume()
@@ -23,18 +23,18 @@ class RedirectFollower: NSObject, URLSessionDataDelegate {
                     newRequest request: URLRequest,
                     completionHandler: @escaping (URLRequest?) -> Void) {
         if let newURL = request.url {
-            self.status = .redirected(to: newURL)
+            self.status = .redirected(to: PackageURL(rawValue: newURL))
         }
         completionHandler(request)
     }
 }
 
 
-public enum Redirect {
-    case initial(URL)
-    case redirected(to: URL)
+enum Redirect {
+    case initial(PackageURL)
+    case redirected(to: PackageURL)
 
-    var url: URL {
+    var url: PackageURL {
         switch self {
             case .initial(let url):
                 return url
@@ -45,7 +45,7 @@ public enum Redirect {
 }
 
 
-public func resolveRedirects(eventLoop: EventLoop, for url: URL, timeout: TimeInterval = 10) -> EventLoopFuture<Redirect> {
+func resolveRedirects(eventLoop: EventLoop, for url: PackageURL, timeout: TimeInterval = 10) -> EventLoopFuture<Redirect> {
     let promise = eventLoop.next().makePromise(of: Redirect.self)
 
     let _ = RedirectFollower(initialURL: url) { result in
@@ -63,7 +63,7 @@ public func resolveRedirects(eventLoop: EventLoop, for url: URL, timeout: TimeIn
 ///   - url: url to test
 ///   - timeout: request timeout
 /// - Returns: `Redirect`
-public func resolvePackageRedirects(eventLoop: EventLoop, for url: URL, timeout: TimeInterval = 10) -> EventLoopFuture<Redirect> {
+func resolvePackageRedirects(eventLoop: EventLoop, for url: PackageURL, timeout: TimeInterval = 10) -> EventLoopFuture<Redirect> {
     resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension(), timeout: timeout)
         .map {
             switch $0 {

@@ -15,7 +15,7 @@ struct FileManager {
 
 
 extension FileManager {
-    func saveList(_ packages: [URL], path: String) throws {
+    func saveList(_ packages: [PackageURL], path: String) throws {
         let fileURL = URL(fileURLWithPath: path)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]

@@ -11,11 +11,16 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(["A", "a"].asURLs.deletingDuplicates().map(\.absoluteString), ["A"])
         XCTAssertEqual(["A", "a", "A"].asURLs.deletingDuplicates().map(\.absoluteString), ["A"])
     }
+
+    func test_Github_packageList() throws {
+        XCTAssertFalse(try Github.packageList().isEmpty)
+    }
 }
 
 
 private extension Array where Element == String {
-    var asURLs: [URL] {
+    var asURLs: [PackageURL] {
         compactMap(URL.init(string:))
+            .map(PackageURL.init(rawValue:))
     }
 }
