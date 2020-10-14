@@ -11,6 +11,11 @@ enum Github {
         let fork: Bool
     }
 
+    static func packageList() throws -> [URL] {
+        try JSONDecoder().decode([URL].self,
+                                 from: Data(contentsOf: Constants.githubPackageListURL))
+    }
+
 }
 
 

@@ -37,7 +37,7 @@ extension Validator {
             }
 
             packageUrls = usePackageList
-                ? try fetchPackageList()
+                ? try Github.packageList()
                 : packageUrls
 
             if let limit = limit {
@@ -56,7 +56,7 @@ extension Validator {
             .sorted(by: { $0.absoluteString.lowercased() < $1.absoluteString.lowercased() })
 
             if let path = output {
-                try saveList(updated, path: path)
+                try Current.fileManager.saveList(updated, path: path)
             }
         }
     }

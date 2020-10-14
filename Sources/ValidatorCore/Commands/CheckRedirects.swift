@@ -27,7 +27,7 @@ extension Validator {
 
         mutating func run() throws {
             packageUrls = usePackageList
-                ? try fetchPackageList()
+                ? try Github.packageList()
                 : packageUrls
 
             if let limit = limit {
@@ -49,25 +49,8 @@ extension Validator {
             .sorted(by: { $0.absoluteString.lowercased() < $1.absoluteString.lowercased() })
 
             if let path = output {
-                try saveList(updated, path: path)
+                try Current.fileManager.saveList(updated, path: path)
             }
         }
-    }
-}
-
-
-func fetchPackageList() throws -> [URL] {
-    try JSONDecoder().decode([URL].self,
-                             from: Data(contentsOf: Constants.githubPackageListURL))
-}
-
-
-func saveList(_ packages: [URL], path: String) throws {
-    let fileURL = URL(fileURLWithPath: path)
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
-    let data = try encoder.encode(packages)
-    guard Current.fileManager.createFile(fileURL.path, data, nil) else {
-        throw AppError.ioError("failed to save 'packages.json'")
     }
 }

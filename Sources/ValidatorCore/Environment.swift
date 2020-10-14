@@ -17,17 +17,7 @@ extension Environment {
 }
 
 
-struct FileManager {
-    var createDirectory: (_ path: String,
-                          _ withIntermediateDirectories: Bool,
-                          _ attributes: [FileAttributeKey : Any]?) throws -> Void
-    var createFile: (_ atPath: String,
-                     _ contents: Data?,
-                     _ attributes: [FileAttributeKey : Any]?) -> Bool
-    var fileExists: (_ path: String) -> Bool
-    var removeItem: (_ path: String) throws -> Void
-    var temporaryDirectory: () -> URL
-
+extension FileManager {
     static let live: Self = .init(
         createDirectory: Foundation.FileManager.default
             .createDirectory(atPath:withIntermediateDirectories:attributes:),
