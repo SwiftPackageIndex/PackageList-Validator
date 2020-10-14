@@ -12,7 +12,7 @@ extension Validator {
         var output: String?
 
         @Argument(help: "Package urls to check")
-        var packageUrls: [URL] = []
+        var packageUrls: [PackageURL] = []
 
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
@@ -36,7 +36,7 @@ extension Validator {
 
             print("Checking for redirects (\(packageUrls.count) packages) ...")
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-            let updated = try packageUrls.map { packageURL -> URL in
+            let updated = try packageUrls.map { packageURL in
                 switch try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL).wait() {
                     case .initial:
                         return packageURL
@@ -46,7 +46,7 @@ extension Validator {
                 }
             }
             .deletingDuplicates()
-            .sorted(by: { $0.absoluteString.lowercased() < $1.absoluteString.lowercased() })
+            .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)

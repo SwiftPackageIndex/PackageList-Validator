@@ -11,8 +11,8 @@ enum Github {
         let fork: Bool
     }
 
-    static func packageList() throws -> [URL] {
-        try JSONDecoder().decode([URL].self,
+    static func packageList() throws -> [PackageURL] {
+        try JSONDecoder().decode([PackageURL].self,
                                  from: Data(contentsOf: Constants.githubPackageListURL))
     }
 
@@ -58,13 +58,6 @@ extension Github {
     static var repositoryCache = Cache<Repository>()
 
 
-    static func fetchRepository(client: HTTPClient, url: URL) -> EventLoopFuture<Repository> {
-        let repository = url.deletingPathExtension().lastPathComponent
-        let owner = url.deletingLastPathComponent().lastPathComponent
-        return fetchRepository(client: client, owner: owner, repository: repository)
-    }
-
-
     static func fetchRepository(client: HTTPClient, owner: String, repository: String) -> EventLoopFuture<Repository> {
         let url = URL(string: "https://api.github.com/repos/\(owner)/\(repository)")!
         if let cached = repositoryCache[Cache.Key(string: url.absoluteString)] {
@@ -78,9 +71,9 @@ extension Github {
     }
 
 
-    static func fetchRepositories(client: HTTPClient, urls: [URL]) -> EventLoopFuture<[(URL, Repository)]> {
+    static func fetchRepositories(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[(PackageURL, Repository)]> {
         let req = urls.map { url in
-            fetchRepository(client: client, url: url)
+            fetchRepository(client: client, owner: url.owner, repository: url.repository)
                 .map { (url, $0) }
         }
         return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
