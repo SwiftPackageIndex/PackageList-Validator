@@ -120,10 +120,11 @@ func findDependencies(packageURL: PackageURL, followRedirects: Bool, waitIfRateL
                                     followRedirects: followRedirects).wait()
     } catch AppError.rateLimited(until: let reset) where waitIfRateLimited {
         print("rate limit will reset at \(reset)")
-        let delay = UInt32(max(0, reset.timeIntervalSinceNow) + 1)
+        let delay = UInt32(max(0, reset.timeIntervalSinceNow) + 60)
         print("sleeping for \(delay) seconds ...")
         fflush(stdout)
         sleep(delay)
+        print("now: \(Date())")
 
         // Create a new client so we don't run into HTTPClientError.remoteConnectionClosed
         // when the delay exceeds 60s. (We could try and create a custom config with
