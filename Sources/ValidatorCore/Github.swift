@@ -11,24 +11,6 @@ enum Github {
         let fork: Bool
     }
 
-
-    struct Product: Decodable {
-        let name: String
-    }
-
-
-    struct Dependency: Decodable, Hashable {
-        let name: String
-        let url: URL
-    }
-
-
-    struct Package: Decodable {
-        let name: String
-        let products: [Product]
-        let dependencies: [Dependency]
-    }
-
 }
 
 

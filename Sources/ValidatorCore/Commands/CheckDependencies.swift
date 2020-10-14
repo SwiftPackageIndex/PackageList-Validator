@@ -63,22 +63,6 @@ extension Validator {
 }
 
 
-func dumpPackage(manifestURL: URL) throws -> Github.Package {
-    try withTempDir { tempDir in
-        let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent("Package.swift")
-        let data = try Data(contentsOf: manifestURL)
-        guard Current.fileManager.createFile(fileURL.path, data, nil) else {
-            throw AppError.dumpPackageError("failed to save manifest \(manifestURL.absoluteString) to temp directory \(fileURL.absoluteString)")
-        }
-        guard let pkgJSON = try Current.shell.run(command: .packageDump, at: tempDir)
-                .data(using: .utf8) else {
-            throw AppError.dumpPackageError("package dump did not return data")
-        }
-        return try JSONDecoder().decode(Github.Package.self, from: pkgJSON)
-    }
-}
-
-
 func resolvePackageRedirects(eventLoop: EventLoop, urls: [URL], followRedirects: Bool = false) -> EventLoopFuture<[URL]> {
     let req = urls.map { url -> EventLoopFuture<URL> in
         followRedirects
@@ -129,7 +113,7 @@ func findDependencies(client: HTTPClient, url: URL, followRedirects: Bool = fals
     let el = client.eventLoopGroup.next()
     return getManifestURL(client: client, url: url)
         .flatMapThrowing {
-            try dumpPackage(manifestURL: $0)
+            try Package.decode(from: $0)
         }
         .map { $0.dependencies
             .filter { $0.url.scheme == "https" }
