@@ -1,8 +1,1 @@
-//
-//  File.swift
-//  
-//
-//  Created by Sven A. Schmidt on 15/10/2020.
-//
-
-import Foundation
+let AppVersion = "undefined version: run 'make version' to update"
