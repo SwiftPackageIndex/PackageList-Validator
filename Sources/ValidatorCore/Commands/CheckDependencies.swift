@@ -112,28 +112,35 @@ func dropNoProducts(client: HTTPClient, packageURLs: [PackageURL]) -> EventLoopF
 
 
 func findDependencies(packageURL: PackageURL, followRedirects: Bool, waitIfRateLimited: Bool) throws -> [PackageURL] {
-    do {
-        let client = HTTPClient(eventLoopGroupProvider: .createNew)
-        defer { try? client.syncShutdown() }
-        return try findDependencies(client: client,
-                                    url: packageURL,
-                                    followRedirects: followRedirects).wait()
-    } catch AppError.rateLimited(until: let reset) where waitIfRateLimited {
-        print("rate limit will reset at \(reset)")
-        let delay = UInt32(max(0, reset.timeIntervalSinceNow) + 60)
-        print("sleeping for \(delay) seconds ...")
-        fflush(stdout)
-        sleep(delay)
-        print("now: \(Date())")
+    try Retry.attempt("Finding dependencies", retries: 3) {
+        do {
+            let client = HTTPClient(eventLoopGroupProvider: .createNew)
+            defer { try? client.syncShutdown() }
+            return try findDependencies(client: client,
+                                        url: packageURL,
+                                        followRedirects: followRedirects).wait()
+        } catch AppError.rateLimited(until: let reset) where waitIfRateLimited {
+            print("RATE LIMITED")
+            print("rate limit will reset at \(reset)")
+            let delay = UInt32(max(0, reset.timeIntervalSinceNow) + 60)
+            print("sleeping for \(delay) seconds ...")
+            fflush(stdout)
+            sleep(delay)
+            print("now: \(Date())")
+            throw AppError.rateLimited(until: reset)
 
-        // Create a new client so we don't run into HTTPClientError.remoteConnectionClosed
-        // when the delay exceeds 60s. (We could try and create a custom config with
-        // higher maximumAllowedIdleTimeInConnectionPool but it's quite fiddly.
-        let client = HTTPClient(eventLoopGroupProvider: .createNew)
-        defer { try? client.syncShutdown() }
-        return try findDependencies(client: client,
-                                    url: packageURL,
-                                    followRedirects: followRedirects).wait()
+            //        // Create a new client so we don't run into HTTPClientError.remoteConnectionClosed
+            //        // when the delay exceeds 60s. (We could try and create a custom config with
+            //        // higher maximumAllowedIdleTimeInConnectionPool but it's quite fiddly.
+            //        let client = HTTPClient(eventLoopGroupProvider: .createNew)
+            //        defer { try? client.syncShutdown() }
+            //        return try findDependencies(client: client,
+            //                                    url: packageURL,
+            //                                    followRedirects: followRedirects).wait()
+        } catch {
+            print("ERROR: \(error.localizedDescription)")
+            throw error
+        }
     }
 }
 
@@ -154,13 +161,11 @@ func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool
         .flatMap { dropForks(client: client, urls: $0) }
         .flatMap { dropNoProducts(client: client, packageURLs: $0) }
         .map { urls in
-//            if !urls.isEmpty {
-                print("Dependencies for \(url.absoluteString) ...")
-                urls.forEach {
-                    print("  - \($0.absoluteString)")
-                }
-                fflush(stdout)
-//            }
+            print("Dependencies for \(url.absoluteString) ...")
+            urls.forEach {
+                print("  - \($0.absoluteString)")
+            }
+            fflush(stdout)
             return urls
         }
 }
@@ -188,7 +193,10 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
                     return eventLoop.makeSucceededFuture(content)
                 } catch {
                     let json = body.getString(at: 0, length: body.readableBytes) ?? "(nil)"
-                    return eventLoop.makeFailedFuture(AppError.decodingError(error, json: json))
+                    return eventLoop.makeFailedFuture(
+                        AppError.decodingError(context: url.absoluteString,
+                                               underlyingError: error,
+                                               json: json))
                 }
             }
     } catch {
