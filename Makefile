@@ -6,7 +6,7 @@ VERSION_FILE = Sources/ValidatorCore/Version.swift
 XCODE="/Applications/Xcode_12.app"
 
 commit: install
-	git commit -a -m "Version: $(VERSION)"
+	git commit -a -m "make commit: $(VERSION)"
 
 
 install: version
