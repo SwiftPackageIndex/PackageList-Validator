@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := install
 
 
-VERSION = $(shell git describe --always --tags --dirty)
+VERSION := $(shell git describe --always --tags --dirty)
 VERSION_FILE = Sources/ValidatorCore/Version.swift
 XCODE="/Applications/Xcode_12.app"
 
