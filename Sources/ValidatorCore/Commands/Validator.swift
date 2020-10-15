@@ -21,7 +21,7 @@ extension Validator {
         var showVersion: Bool = false
 
         mutating func run() throws {
-            print(AppVersion)
+            print("Version: \(AppVersion)")
         }
     }
 }
