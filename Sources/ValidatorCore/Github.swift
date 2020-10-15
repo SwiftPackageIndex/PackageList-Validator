@@ -64,6 +64,15 @@ extension Github {
             return client.eventLoopGroup.next().makeSucceededFuture(cached)
         }
         return fetch(Repository.self, client: client, url: url)
+            .flatMapError { error in
+                let eventLoop = client.eventLoopGroup.next()
+                if case AppError.requestFailed(_, 404) = error {
+                    return eventLoop.makeFailedFuture(
+                        AppError.repositoryNotFound(owner: owner, name: repository)
+                    )
+                }
+                return eventLoop.makeFailedFuture(error)
+            }
             .map { repo in
                 repositoryCache[Cache.Key(string: url.absoluteString)] = repo
                 return repo
@@ -71,10 +80,22 @@ extension Github {
     }
 
 
-    static func fetchRepositories(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[(PackageURL, Repository)]> {
-        let req = urls.map { url in
+    /// Fetch repositories for a collection of package urls. Repository is `nil` for package urls that are not found (404).
+    /// - Parameters:
+    ///   - client: http client
+    ///   - urls: list of package urls
+    /// - Returns: list of `(PackageURL, Repository?)` pairs
+    static func fetchRepositories(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[(PackageURL, Repository?)]> {
+        let req: [EventLoopFuture<(PackageURL, Repository?)>] = urls.map { url -> EventLoopFuture<(PackageURL, Repository?)> in
             fetchRepository(client: client, owner: url.owner, repository: url.repository)
                 .map { (url, $0) }
+                .flatMapError { error -> EventLoopFuture<(PackageURL, Repository?)> in
+                    // convert 'repository not found' into nil value
+                    if case AppError.repositoryNotFound = error {
+                        return client.eventLoopGroup.next().makeSucceededFuture((url, nil))
+                    }
+                    return client.eventLoopGroup.next().makeFailedFuture(error)
+                }
         }
         return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
     }

@@ -7,6 +7,8 @@ enum AppError: Error {
     case ioError(String)
     case noData(URL)
     case rateLimited(until: Date)
+    case repositoryNotFound(owner: String, name: String)
+    case requestFailed(URL, UInt)
     case retryLimitExceeded
     case runtimeError(String)
 }

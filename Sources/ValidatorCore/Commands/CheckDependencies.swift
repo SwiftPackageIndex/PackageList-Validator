@@ -88,7 +88,10 @@ func resolvePackageRedirects(eventLoop: EventLoop, urls: [PackageURL], followRed
 func dropForks(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
     Github.fetchRepositories(client: client, urls: urls)
         .map { pairs in
-            pairs.filter { (url, repo) in !repo.fork }
+            pairs.filter { (url, repo) in
+                guard let repo = repo else { return false }
+                return !repo.fork
+            }
             .map { (url, repo) in url }
         }
 }
@@ -128,17 +131,8 @@ func findDependencies(packageURL: PackageURL, followRedirects: Bool, waitIfRateL
             sleep(delay)
             print("now: \(Date())")
             throw AppError.rateLimited(until: reset)
-
-            //        // Create a new client so we don't run into HTTPClientError.remoteConnectionClosed
-            //        // when the delay exceeds 60s. (We could try and create a custom config with
-            //        // higher maximumAllowedIdleTimeInConnectionPool but it's quite fiddly.
-            //        let client = HTTPClient(eventLoopGroupProvider: .createNew)
-            //        defer { try? client.syncShutdown() }
-            //        return try findDependencies(client: client,
-            //                                    url: packageURL,
-            //                                    followRedirects: followRedirects).wait()
         } catch {
-            print("ERROR: \(error.localizedDescription)")
+            print("ERROR: \(error)")
             throw error
         }
     }
@@ -147,6 +141,7 @@ func findDependencies(packageURL: PackageURL, followRedirects: Bool, waitIfRateL
 
 func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool = false) throws -> EventLoopFuture<[PackageURL]> {
     let el = client.eventLoopGroup.next()
+    print("Dependencies for \(url.absoluteString) ...")
     return Package.getManifestURL(client: client, packageURL: url)
         .flatMapThrowing {
             try Package.decode(from: $0)
@@ -161,7 +156,6 @@ func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool
         .flatMap { dropForks(client: client, urls: $0) }
         .flatMap { dropNoProducts(client: client, packageURLs: $0) }
         .map { urls in
-            print("Dependencies for \(url.absoluteString) ...")
             urls.forEach {
                 print("  - \($0.absoluteString)")
             }
@@ -184,6 +178,11 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
             .flatMap { response in
                 if case let .limited(until: reset) = Github.rateLimitStatus(response) {
                     return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                }
+                guard (200...299).contains(response.status.code) else {
+                    return eventLoop.makeFailedFuture(
+                        AppError.requestFailed(url, response.status.code)
+                    )
                 }
                 guard let body = response.body else {
                     return eventLoop.makeFailedFuture(AppError.noData(url))
