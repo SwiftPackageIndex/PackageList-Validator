@@ -154,12 +154,13 @@ func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool
         .flatMap { dropForks(client: client, urls: $0) }
         .flatMap { dropNoProducts(client: client, packageURLs: $0) }
         .map { urls in
-            if !urls.isEmpty {
-                print("Dependencies for \(url.absoluteString)")
+//            if !urls.isEmpty {
+                print("Dependencies for \(url.absoluteString) ...")
                 urls.forEach {
                     print("  - \($0.absoluteString)")
                 }
-            }
+                fflush(stdout)
+//            }
             return urls
         }
 }
