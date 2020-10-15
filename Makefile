@@ -5,6 +5,9 @@ VERSION = $(shell git describe --always --tags --dirty)
 VERSION_FILE = Sources/ValidatorCore/Version.swift
 XCODE="/Applications/Xcode_12.app"
 
+commit: install
+	git commit -a -m "Version: $(VERSION)"
+
 
 install: version
 	env DEVELOPER_DIR=$(XCODE) xcrun swift build -c release
