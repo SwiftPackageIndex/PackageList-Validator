@@ -20,9 +20,6 @@ extension Validator {
         @Argument(help: "Package urls to check")
         var packageUrls: [PackageURL] = []
 
-        @Flag(name: .shortAndLong, help: "follow redirects")
-        var follow = false
-
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
 
@@ -60,7 +57,6 @@ extension Validator {
                 .flatMap { packageURL in
                     try [packageURL] +
                         findDependencies(packageURL: packageURL,
-                                         followRedirects: follow,
                                          waitIfRateLimited: true)
                 }
                 .mergingAdditions(with: inputURLs)
@@ -74,14 +70,14 @@ extension Validator {
 }
 
 
-func resolvePackageRedirects(eventLoop: EventLoop, urls: [PackageURL], followRedirects: Bool = false) -> EventLoopFuture<[PackageURL]> {
-    let req = urls.map { url -> EventLoopFuture<PackageURL> in
-        followRedirects
-            ? resolvePackageRedirects(eventLoop: eventLoop,
-                                      for: url).map(\.url)
-            : eventLoop.makeSucceededFuture(url)
-    }
-    return EventLoopFuture.whenAllSucceed(req, on: eventLoop)
+func resolvePackageRedirects(eventLoop: EventLoop, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
+    EventLoopFuture.whenAllSucceed(
+        urls.map {
+            resolvePackageRedirects(eventLoop: eventLoop, for: $0)
+                .map(\.url)
+        },
+        on: eventLoop
+    )
 }
 
 
@@ -114,14 +110,12 @@ func dropNoProducts(client: HTTPClient, packageURLs: [PackageURL]) -> EventLoopF
 }
 
 
-func findDependencies(packageURL: PackageURL, followRedirects: Bool, waitIfRateLimited: Bool) throws -> [PackageURL] {
+func findDependencies(packageURL: PackageURL, waitIfRateLimited: Bool) throws -> [PackageURL] {
     try Retry.attempt("Finding dependencies", retries: 3) {
         do {
             let client = HTTPClient(eventLoopGroupProvider: .createNew)
             defer { try? client.syncShutdown() }
-            return try findDependencies(client: client,
-                                        url: packageURL,
-                                        followRedirects: followRedirects).wait()
+            return try findDependencies(client: client, url: packageURL).wait()
         } catch AppError.rateLimited(until: let reset) where waitIfRateLimited {
             print("RATE LIMITED")
             print("rate limit will reset at \(reset)")
@@ -139,7 +133,7 @@ func findDependencies(packageURL: PackageURL, followRedirects: Bool, waitIfRateL
 }
 
 
-func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool = false) throws -> EventLoopFuture<[PackageURL]> {
+func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFuture<[PackageURL]> {
     let el = client.eventLoopGroup.next()
     print("Dependencies for \(url.absoluteString) ...")
     return Package.getManifestURL(client: client, packageURL: url)
@@ -157,9 +151,7 @@ func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool
             }
             return el.makeFailedFuture(error)
         }
-        .flatMap { resolvePackageRedirects(eventLoop: el,
-                                           urls: $0,
-                                           followRedirects: followRedirects) }
+        .flatMap { resolvePackageRedirects(eventLoop: el, urls: $0) }
         .flatMap { dropForks(client: client, urls: $0) }
         .flatMap { dropNoProducts(client: client, packageURLs: $0) }
         .map { urls in
