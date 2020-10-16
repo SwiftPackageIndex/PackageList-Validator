@@ -8,6 +8,7 @@ typealias PackageURL = Tagged<Package, URL>
 
 extension PackageURL {
     var absoluteString: String { rawValue.absoluteString }
+    var host: String? { rawValue.host }
     var scheme: String? { rawValue.scheme }
     var repository: String { rawValue.deletingPathExtension().lastPathComponent }
     var owner: String { rawValue.deletingLastPathComponent().lastPathComponent }

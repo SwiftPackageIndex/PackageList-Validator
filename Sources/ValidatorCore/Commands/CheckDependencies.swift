@@ -147,6 +147,7 @@ func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool
             try Package.decode(from: $0)
                 .dependencies
                 .filter { $0.url.scheme == "https" }
+                .filter { $0.url.host?.lowercased() == "github.com" }
                 .map { $0.url.addingGitExtension() }
         }
         .flatMapError { error in
