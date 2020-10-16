@@ -1,6 +1,7 @@
 import AsyncHTTPClient
 import Foundation
 import NIO
+import ShellOut
 import Tagged
 
 
@@ -34,13 +35,20 @@ extension Package {
             guard Current.fileManager.createFile(fileURL.path, data, nil) else {
                 throw AppError.dumpPackageError("failed to save manifest \(manifestURL.rawValue.absoluteString) to temp directory \(fileURL.absoluteString)")
             }
-            guard let pkgJSON = try Current.shell.run(command: .packageDump, at: tempDir)
-                    .data(using: .utf8) else {
-                throw AppError.dumpPackageError("package dump did not return data")
+            do {
+                guard let pkgJSON = try Current.shell.run(command: .packageDump, at: tempDir)
+                        .data(using: .utf8) else {
+                    throw AppError.dumpPackageError("package dump did not return data")
+                }
+                let pkg = try JSONDecoder().decode(Package.self, from: pkgJSON)
+                packageDumpCache[Cache.Key(string: manifestURL.rawValue.absoluteString)] = pkg
+                return pkg
+            } catch {
+                if let error = error as? ShellOutError {
+                    throw AppError.dumpPackageError("package dump failed: \(error.message)")
+                }
+                throw error
             }
-            let pkg = try JSONDecoder().decode(Package.self, from: pkgJSON)
-            packageDumpCache[Cache.Key(string: manifestURL.rawValue.absoluteString)] = pkg
-            return pkg
         }
     }
 

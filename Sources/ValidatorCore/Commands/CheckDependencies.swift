@@ -145,10 +145,16 @@ func findDependencies(client: HTTPClient, url: PackageURL, followRedirects: Bool
     return Package.getManifestURL(client: client, packageURL: url)
         .flatMapThrowing {
             try Package.decode(from: $0)
+                .dependencies
+                .filter { $0.url.scheme == "https" }
+                .map { $0.url.addingGitExtension() }
         }
-        .map { $0.dependencies
-            .filter { $0.url.scheme == "https" }
-            .map { $0.url.addingGitExtension() }
+        .flatMapError { error in
+            if case AppError.dumpPackageError = error {
+                print("INFO: package dump failed: \(error)")
+                return el.makeSucceededFuture([])
+            }
+            return el.makeFailedFuture(error)
         }
         .flatMap { resolvePackageRedirects(eventLoop: el,
                                            urls: $0,
