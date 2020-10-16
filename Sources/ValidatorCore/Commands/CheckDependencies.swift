@@ -63,7 +63,7 @@ extension Validator {
                                          followRedirects: follow,
                                          waitIfRateLimited: true)
                 }
-                .deletingDuplicates()
+                .mergingAdditions(with: inputURLs)
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
