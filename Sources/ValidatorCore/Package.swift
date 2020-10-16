@@ -43,11 +43,8 @@ extension Package {
                 let pkg = try JSONDecoder().decode(Package.self, from: pkgJSON)
                 packageDumpCache[Cache.Key(string: manifestURL.rawValue.absoluteString)] = pkg
                 return pkg
-            } catch {
-                if let error = error as? ShellOutError {
-                    throw AppError.dumpPackageError("package dump failed: \(error.message)")
-                }
-                throw error
+            } catch let error as ShellOutError {
+                throw AppError.dumpPackageError("package dump failed: \(error.message)")
             }
         }
     }
