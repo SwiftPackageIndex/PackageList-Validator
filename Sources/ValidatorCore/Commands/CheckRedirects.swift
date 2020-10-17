@@ -46,19 +46,23 @@ extension Validator {
             print("Checking for redirects (\(prefix) packages) ...")
 
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            var normalized = inputURLs.map { $0.normalized() }
             let updated = try inputURLs
                 .prefix(prefix)
-                .map { packageURL in
+                .compactMap { packageURL -> PackageURL? in
                     switch try resolvePackageRedirects(eventLoop: elg.next(),
                                                        for: packageURL).wait() {
                         case .initial:
                             return packageURL
                         case .redirected(let url):
+                            guard !normalized.contains(url.normalized()) else {
+                                return nil
+                            }
                             print("↦  \(packageURL) -> \(url)")
+                            normalized.append(url.normalized())
                             return url
                     }
                 }
-                .mergingAdditions(with: inputURLs)
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
