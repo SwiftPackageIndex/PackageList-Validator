@@ -56,6 +56,7 @@ extension Validator {
                             return packageURL
                         case .redirected(let url):
                             guard !normalized.contains(url.normalized()) else {
+                                print("↦  \(packageURL) -> \(url) (already in list)")
                                 return nil
                             }
                             print("↦  \(packageURL) -> \(url)")
