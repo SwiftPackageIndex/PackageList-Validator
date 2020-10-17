@@ -49,7 +49,11 @@ extension Validator {
             var normalized = inputURLs.map { $0.normalized() }
             let updated = try inputURLs
                 .prefix(prefix)
-                .compactMap { packageURL -> PackageURL? in
+                .enumerated()
+                .compactMap { (index, packageURL) -> PackageURL? in
+                    if index % 50 == 0 {
+                        print("package \(index) ...")
+                    }
                     switch try resolvePackageRedirects(eventLoop: elg.next(),
                                                        for: packageURL).wait() {
                         case .initial:
