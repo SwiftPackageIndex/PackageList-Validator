@@ -16,6 +16,15 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
                 completion(.error(error!))
                 return
             }
+            let response = response as! HTTPURLResponse
+            guard response.statusCode != 404 else {
+                completion(.notFound)
+                return
+            }
+            guard response.statusCode != 429 else {
+                completion(.rateLimited)
+                return
+            }
             completion(self!.status)
         }
         self.task?.resume()
@@ -52,13 +61,15 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
 enum Redirect {
     case initial(PackageURL)
     case error(Error)
+    case notFound
+    case rateLimited
     case redirected(to: PackageURL)
 
     var url: PackageURL? {
         switch self {
             case .initial(let url):
                 return url
-            case .error:
+            case .error, .notFound, .rateLimited:
                 return nil
             case .redirected(to: let url):
                 return url
@@ -87,14 +98,20 @@ func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFut
 /// - Returns: `Redirect`
 func resolvePackageRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
     resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
-        .map {
-            switch $0 {
-                case .initial:
-                    return .initial(url)
-                case .error:
-                    return $0
+        .flatMap { status -> EventLoopFuture<Redirect> in
+            switch status {
+                case .initial, .notFound, .error:
+                    return eventLoop.makeSucceededFuture(status)
+                case .rateLimited:
+                    // TODO: avoid recursing forever
+                    let delay: UInt32 = 60
+                    print("RATE LIMITED")
+                    print("sleeping for \(delay)s ...")
+                    fflush(stdout)
+                    sleep(delay)
+                    return resolvePackageRedirects(eventLoop: eventLoop, for: url)
                 case .redirected(to: let url):
-                    return .redirected(to: url.addingGitExtension())
+                    return eventLoop.makeSucceededFuture(.redirected(to: url.addingGitExtension()))
             }
         }
 }
