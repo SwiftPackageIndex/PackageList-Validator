@@ -55,6 +55,10 @@ func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFutur
                             return _resolveRedirects(client: client, for: redirected)
                         case 404:
                             return el.makeSucceededFuture(.notFound(url.rawValue))
+                        case 429:
+                            print("RATE LIMITED")
+                            dump(response)
+                            fallthrough
                         default:
                             return el.makeFailedFuture(
                                 AppError.runtimeError("unexpected status '\(response.status.code)' for url: \(url.absoluteString)")
