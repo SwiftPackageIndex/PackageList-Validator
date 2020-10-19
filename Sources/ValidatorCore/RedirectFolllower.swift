@@ -58,6 +58,7 @@ func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFutur
                         case 429:
                             print("RATE LIMITED")
                             dump(response)
+                            fflush(stdout)
                             fallthrough
                         default:
                             return el.makeFailedFuture(
