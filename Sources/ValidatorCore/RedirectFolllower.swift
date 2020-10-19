@@ -2,7 +2,7 @@ import Foundation
 import NIO
 
 
-class RedirectFollower: NSObject, URLSessionDataDelegate {
+class RedirectFollower: NSObject, URLSessionTaskDelegate {
     var status: Redirect
     var session: URLSession?
     var task: URLSessionDataTask?
@@ -27,17 +27,26 @@ class RedirectFollower: NSObject, URLSessionDataDelegate {
         }
         completionHandler(request)
     }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            self.status = .error(error)
+        }
+    }
 }
 
 
 enum Redirect {
     case initial(PackageURL)
+    case error(Error)
     case redirected(to: PackageURL)
 
-    var url: PackageURL {
+    var url: PackageURL? {
         switch self {
             case .initial(let url):
                 return url
+            case .error:
+                return nil
             case .redirected(to: let url):
                 return url
         }
@@ -45,7 +54,7 @@ enum Redirect {
 }
 
 
-func resolveRedirects(eventLoop: EventLoop, for url: PackageURL, timeout: TimeInterval = 10) -> EventLoopFuture<Redirect> {
+func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
     let promise = eventLoop.next().makePromise(of: Redirect.self)
 
     let _ = RedirectFollower(initialURL: url) { result in
@@ -63,12 +72,14 @@ func resolveRedirects(eventLoop: EventLoop, for url: PackageURL, timeout: TimeIn
 ///   - url: url to test
 ///   - timeout: request timeout
 /// - Returns: `Redirect`
-func resolvePackageRedirects(eventLoop: EventLoop, for url: PackageURL, timeout: TimeInterval = 10) -> EventLoopFuture<Redirect> {
-    resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension(), timeout: timeout)
+func resolvePackageRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
+    resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
         .map {
             switch $0 {
                 case .initial:
                     return .initial(url)
+                case .error:
+                    return $0
                 case .redirected(to: let url):
                     return .redirected(to: url.addingGitExtension())
             }

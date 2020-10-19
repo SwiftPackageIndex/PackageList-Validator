@@ -71,13 +71,15 @@ extension Validator {
 
 
 func resolvePackageRedirects(eventLoop: EventLoop, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
-    EventLoopFuture.whenAllSucceed(
-        urls.map {
-            resolvePackageRedirects(eventLoop: eventLoop, for: $0)
-                .map(\.url)
-        },
-        on: eventLoop
-    )
+    let requests = urls.map {
+        resolvePackageRedirects(eventLoop: eventLoop, for: $0)
+            .map(\.url)
+    }
+    let flattened = EventLoopFuture.whenAllSucceed(requests, on: eventLoop)
+    return flattened.map {
+        // drop nil urls
+        $0.compactMap({ $0 })
+    }
 }
 
 

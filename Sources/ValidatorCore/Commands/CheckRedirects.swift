@@ -56,20 +56,25 @@ extension Validator {
                 .compactMap { (index, packageURL) -> PackageURL? in
                     if verbose || index % 50 == 0 {
                         print("package \(index) ...")
+                        fflush(stdout)
                     }
                     switch try resolvePackageRedirects(eventLoop: elg.next(),
                                                        for: packageURL).wait() {
                         case .initial:
                             if verbose {
-                                print("   \(packageURL.absoluteString)")
+                                print("        \(packageURL.absoluteString)")
                             }
                             return packageURL
+                        case let .error(error):
+                            print("ERROR: \(error)")
+                            // TODO: consider bailing out here, at least for some errors
+                            return nil
                         case .redirected(let url):
                             guard !normalized.contains(url.normalized()) else {
-                                print("-  \(packageURL) -> \(url)")
+                                print("DELETE  \(packageURL) -> \(url) (exists)")
                                 return nil
                             }
-                            print("+  \(packageURL) -> \(url)")
+                            print("ADD     \(packageURL) -> \(url) (new)")
                             normalized.append(url.normalized())
                             return url
                     }
