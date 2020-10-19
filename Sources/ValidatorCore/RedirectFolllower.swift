@@ -83,21 +83,35 @@ func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFut
 ///   - url: url to test
 ///   - timeout: request timeout
 /// - Returns: `Redirect`
-func resolvePackageRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
-    resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
-        .flatMap { status -> EventLoopFuture<Redirect> in
-            switch status {
-                case .initial, .notFound, .error:
-                    return eventLoop.makeSucceededFuture(status)
-                case .rateLimited(let delay):
-                    // TODO: avoid recursing forever
-                    print("RATE LIMITED")
-                    print("sleeping for \(delay)s ...")
-                    fflush(stdout)
-                    sleep(UInt32(delay))
-                    return resolvePackageRedirects(eventLoop: eventLoop, for: url)
-                case .redirected(to: let url):
-                    return eventLoop.makeSucceededFuture(.redirected(to: url.addingGitExtension()))
+func resolvePackageRedirects(eventLoop: EventLoop,
+                             for url: PackageURL) -> EventLoopFuture<Redirect> {
+    let maxDepth = 10
+    var depth = 0
+
+    func _resolvePackageRedirects(eventLoop: EventLoop,
+                                  for url: PackageURL) -> EventLoopFuture<Redirect> {
+        resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
+            .flatMap { status -> EventLoopFuture<Redirect> in
+                switch status {
+                    case .initial, .notFound, .error:
+                        return eventLoop.makeSucceededFuture(status)
+                    case .rateLimited(let delay):
+                        guard depth < maxDepth else {
+                            return eventLoop.makeFailedFuture(
+                                AppError.runtimeError("recursion limit exceeded")
+                            )
+                        }
+                        depth += 1
+                        print("RATE LIMITED")
+                        print("sleeping for \(delay)s ...")
+                        fflush(stdout)
+                        sleep(UInt32(delay))
+                        return resolvePackageRedirects(eventLoop: eventLoop, for: url)
+                    case .redirected(to: let url):
+                        return eventLoop.makeSucceededFuture(.redirected(to: url.addingGitExtension()))
+                }
             }
-        }
+    }
+
+    return _resolvePackageRedirects(eventLoop: eventLoop, for: url)
 }
