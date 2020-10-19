@@ -20,6 +20,9 @@ extension Validator {
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
 
+        @Flag(name: .long, help: "enable detailed logging")
+        var verbose = false
+
         var inputSource: InputSource {
             switch (input, usePackageList, packageUrls.count) {
                 case (.some(let fname), false, 0):
@@ -51,19 +54,22 @@ extension Validator {
                 .prefix(prefix)
                 .enumerated()
                 .compactMap { (index, packageURL) -> PackageURL? in
-                    if index % 50 == 0 {
+                    if verbose || index % 50 == 0 {
                         print("package \(index) ...")
                     }
                     switch try resolvePackageRedirects(eventLoop: elg.next(),
                                                        for: packageURL).wait() {
                         case .initial:
+                            if verbose {
+                                print("   \(packageURL.absoluteString)")
+                            }
                             return packageURL
                         case .redirected(let url):
                             guard !normalized.contains(url.normalized()) else {
-                                print("↦  \(packageURL) -> \(url) (already in list)")
+                                print("-  \(packageURL) -> \(url)")
                                 return nil
                             }
-                            print("↦  \(packageURL) -> \(url)")
+                            print("+  \(packageURL) -> \(url)")
                             normalized.append(url.normalized())
                             return url
                     }
