@@ -54,30 +54,14 @@ enum Redirect {
 }
 
 
-// FIXME: clean up
-import ShellOut
-
-// TODO: drop future
 func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
-    let cmd = ShellOutCommand(string: "curl -Ls -o /dev/null -w %{url_effective} \(url.absoluteString)")
-    do {
-        let result = try Current.shell.run(command: cmd)
-        guard let newURL = URL(string: result) else {
-            return eventLoop.makeFailedFuture(
-                AppError.runtimeError("curl for redirects returned bad url: \(result)")
-            )
-        }
-        let newPackageURL = PackageURL(rawValue: newURL)
-        return eventLoop.makeSucceededFuture(
-            url.normalized() == newPackageURL.normalized()
-                ? .initial(url)
-                : .redirected(to: newPackageURL)
-        )
-    } catch {
-        return eventLoop.makeFailedFuture(
-            AppError.runtimeError("curl for redirects failed: \(error)")
-        )
+    let promise = eventLoop.next().makePromise(of: Redirect.self)
+
+    let _ = RedirectFollower(initialURL: url) { result in
+        promise.succeed(result)
     }
+
+    return promise.futureResult
 }
 
 
