@@ -50,7 +50,11 @@ extension Validator {
             print("Checking for redirects (\(prefix) packages) ...")
 
             let client = HTTPClient(eventLoopGroupProvider: .createNew,
-                                    configuration: .init(redirectConfiguration: .disallow))
+                                    configuration: .init(
+                                        redirectConfiguration: .disallow,
+                                        connectionPool: .init(idleTimeout: .minutes(5))
+                                    )
+            )
             var normalized = inputURLs.map { $0.normalized() }
             let updated = try inputURLs
                 .prefix(prefix)
