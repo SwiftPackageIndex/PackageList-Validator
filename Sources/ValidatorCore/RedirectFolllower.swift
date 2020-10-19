@@ -57,9 +57,12 @@ func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFutur
                             return el.makeSucceededFuture(.notFound(url.rawValue))
                         case 429:
                             print("RATE LIMITED")
-                            dump(response)
-                            fflush(stdout)
-                            fallthrough
+                            let delay = response.headers["Retry-After"]
+                                .first
+                                .flatMap(UInt32.init) ?? 60
+                            print("Sleeping for \(delay)s ...")
+                            sleep(delay)
+                            return _resolveRedirects(client: client, for: url)
                         default:
                             return el.makeFailedFuture(
                                 AppError.runtimeError("unexpected status '\(response.status.code)' for url: \(url.absoluteString)")
