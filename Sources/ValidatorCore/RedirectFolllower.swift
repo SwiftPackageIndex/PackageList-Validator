@@ -22,7 +22,9 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
                 return
             }
             guard response.statusCode != 429 else {
-                completion(.rateLimited)
+                let delay = response.value(forHTTPHeaderField: "Retry-After").flatMap(Int.init)
+                    ?? 60
+                completion(.rateLimited(delay: delay))
                 return
             }
             completion(self!.status)
@@ -62,7 +64,7 @@ enum Redirect {
     case initial(PackageURL)
     case error(Error)
     case notFound
-    case rateLimited
+    case rateLimited(delay: Int)
     case redirected(to: PackageURL)
 
     var url: PackageURL? {
@@ -102,13 +104,12 @@ func resolvePackageRedirects(eventLoop: EventLoop, for url: PackageURL) -> Event
             switch status {
                 case .initial, .notFound, .error:
                     return eventLoop.makeSucceededFuture(status)
-                case .rateLimited:
+                case .rateLimited(let delay):
                     // TODO: avoid recursing forever
-                    let delay: UInt32 = 60
                     print("RATE LIMITED")
                     print("sleeping for \(delay)s ...")
                     fflush(stdout)
-                    sleep(delay)
+                    sleep(UInt32(delay))
                     return resolvePackageRedirects(eventLoop: eventLoop, for: url)
                 case .redirected(to: let url):
                     return eventLoop.makeSucceededFuture(.redirected(to: url.addingGitExtension()))
