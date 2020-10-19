@@ -1,4 +1,5 @@
 import ArgumentParser
+import AsyncHTTPClient
 import Foundation
 import NIO
 
@@ -48,7 +49,8 @@ extension Validator {
 
             print("Checking for redirects (\(prefix) packages) ...")
 
-            let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            let client = HTTPClient(eventLoopGroupProvider: .createNew,
+                                    configuration: .init(redirectConfiguration: .disallow))
             var normalized = inputURLs.map { $0.normalized() }
             let updated = try inputURLs
                 .prefix(prefix)
@@ -58,22 +60,24 @@ extension Validator {
                         print("package \(index) ...")
                         fflush(stdout)
                     }
-                    switch try resolvePackageRedirects(eventLoop: elg.next(),
+                    switch try resolvePackageRedirects(client: client,
                                                        for: packageURL).wait() {
                         case .initial:
                             if verbose {
                                 print("        \(packageURL.absoluteString)")
                             }
                             return packageURL
-                        case let .error(error):
-                            print("ERROR: \(error)")
-                            throw error
+                        case let .notFound(url):
+                            print("package \(index) ...")
+                            print("NOT FOUND:  \(url)")
+                            return nil
                         case .redirected(let url):
+                            print("package \(index) ...")
                             guard !normalized.contains(url.normalized()) else {
                                 print("DELETE  \(packageURL) -> \(url) (exists)")
                                 return nil
                             }
-                            print("ADD     \(packageURL) -> \(url) (new)")
+                            print("RENAME  \(packageURL) -> \(url) (new)")
                             normalized.append(url.normalized())
                             return url
                     }

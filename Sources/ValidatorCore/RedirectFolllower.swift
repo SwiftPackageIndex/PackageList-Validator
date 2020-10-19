@@ -1,52 +1,18 @@
+import AsyncHTTPClient
 import Foundation
 import NIO
 
 
-class RedirectFollower: NSObject, URLSessionTaskDelegate {
-    var status: Redirect
-    var session: URLSession?
-    var task: URLSessionDataTask?
-
-    init(initialURL: PackageURL, completion: @escaping (Redirect) -> Void) {
-        self.status = .initial(initialURL)
-        super.init()
-        self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        self.task = session?.dataTask(with: initialURL.rawValue) { [weak self] (_, response, error) in
-            completion(self!.status)
-        }
-        self.task?.resume()
-    }
-
-    func urlSession(_ session: URLSession,
-                    task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) {
-        print("### redirect hop to \(String(describing: request.url))")
-        if let newURL = request.url {
-            self.status = .redirected(to: PackageURL(rawValue: newURL))
-        }
-        completionHandler(request)
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error {
-            self.status = .error(error)
-        }
-    }
-}
-
-
 enum Redirect {
     case initial(PackageURL)
-    case error(Error)
+    case notFound(URL)
     case redirected(to: PackageURL)
 
     var url: PackageURL? {
         switch self {
             case .initial(let url):
                 return url
-            case .error:
+            case .notFound:
                 return nil
             case .redirected(to: let url):
                 return url
@@ -55,14 +21,52 @@ enum Redirect {
 }
 
 
-func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
-    let promise = eventLoop.next().makePromise(of: Redirect.self)
+func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
+    var lastResult = Redirect.initial(url)
+    var hopCount = 0
+    let maxHops = 10
 
-    let _ = RedirectFollower(initialURL: url) { result in
-        promise.succeed(result)
+    func _resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
+        do {
+            let request = try HTTPClient.Request(url: url.rawValue, method: .HEAD)
+            return client.execute(request: request)
+                .flatMap { response in
+                    let el = client.eventLoopGroup.next()
+                    switch response.status.code {
+                        case 200...299:
+                            return el.makeSucceededFuture(lastResult)
+                        case 301:
+                            guard hopCount < maxHops else {
+                                return el.makeFailedFuture(
+                                    AppError.runtimeError("max redirects exceeded for url: \(url.absoluteString)")
+                                )
+                            }
+                            guard
+                                let redirected = response.headers["Location"]
+                                    .first
+                                    .flatMap(URL.init(string:))
+                                    .map(PackageURL.init(rawValue:)) else {
+                                return el.makeFailedFuture(
+                                    AppError.runtimeError("no Location header for url: \(url.absoluteString)")
+                                )
+                            }
+                            lastResult = .redirected(to: redirected)
+                            hopCount += 1
+                            return _resolveRedirects(client: client, for: redirected)
+                        case 404:
+                            return el.makeSucceededFuture(.notFound(url.rawValue))
+                        default:
+                            return el.makeFailedFuture(
+                                AppError.runtimeError("unexpected status '\(response.status.code)' for url: \(url.absoluteString)")
+                            )
+                    }
+                }
+        } catch {
+            return client.eventLoopGroup.next().makeFailedFuture(error)
+        }
     }
 
-    return promise.futureResult
+    return _resolveRedirects(client: client, for: url)
 }
 
 
@@ -73,13 +77,13 @@ func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFut
 ///   - url: url to test
 ///   - timeout: request timeout
 /// - Returns: `Redirect`
-func resolvePackageRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
-    resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
+func resolvePackageRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
+    resolveRedirects(client: client, for: url.deletingGitExtension())
         .map {
             switch $0 {
                 case .initial:
                     return .initial(url)
-                case .error:
+                case .notFound:
                     return $0
                 case .redirected(to: let url):
                     return .redirected(to: url.addingGitExtension())

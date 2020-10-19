@@ -70,12 +70,12 @@ extension Validator {
 }
 
 
-func resolvePackageRedirects(eventLoop: EventLoop, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
+func resolvePackageRedirects(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
     let requests = urls.map {
-        resolvePackageRedirects(eventLoop: eventLoop, for: $0)
+        resolvePackageRedirects(client: client, for: $0)
             .map(\.url)
     }
-    let flattened = EventLoopFuture.whenAllSucceed(requests, on: eventLoop)
+    let flattened = EventLoopFuture.whenAllSucceed(requests, on: client.eventLoopGroup.next())
     return flattened.map {
         // drop nil urls
         $0.compactMap({ $0 })
@@ -153,7 +153,7 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
             }
             return el.makeFailedFuture(error)
         }
-        .flatMap { resolvePackageRedirects(eventLoop: el, urls: $0) }
+        .flatMap { resolvePackageRedirects(client: client, urls: $0) }
         .flatMap { dropForks(client: client, urls: $0) }
         .flatMap { dropNoProducts(client: client, packageURLs: $0) }
         .map { urls in
