@@ -22,6 +22,7 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
                     willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest,
                     completionHandler: @escaping (URLRequest?) -> Void) {
+        print("### redirect hop to \(String(describing: request.url))")
         if let newURL = request.url {
             self.status = .redirected(to: PackageURL(rawValue: newURL))
         }
