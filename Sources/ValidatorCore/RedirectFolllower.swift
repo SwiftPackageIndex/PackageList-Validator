@@ -12,6 +12,10 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
         super.init()
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         self.task = session?.dataTask(with: initialURL.rawValue) { [weak self] (_, response, error) in
+            guard error == nil else {
+                completion(.error(error!))
+                return
+            }
             completion(self!.status)
         }
         self.task?.resume()
@@ -29,7 +33,15 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
         completionHandler(request)
     }
 
+    func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
+        print("urlSession(_:didBecomeInvalidWithError:) \(String(describing: error))")
+        if let error = error {
+            self.status = .error(error)
+        }
+    }
+
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        print("urlSession(_:task:didCompleteWithError:) \(String(describing: error))")
         if let error = error {
             self.status = .error(error)
         }
