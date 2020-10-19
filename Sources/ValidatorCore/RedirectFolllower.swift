@@ -37,25 +37,10 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
                     willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest,
                     completionHandler: @escaping (URLRequest?) -> Void) {
-        print("### redirect hop to \(String(describing: request.url))")
         if let newURL = request.url {
             self.status = .redirected(to: PackageURL(rawValue: newURL))
         }
         completionHandler(request)
-    }
-
-    func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
-        print("urlSession(_:didBecomeInvalidWithError:) \(String(describing: error))")
-        if let error = error {
-            self.status = .error(error)
-        }
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        print("urlSession(_:task:didCompleteWithError:) \(String(describing: error))")
-        if let error = error {
-            self.status = .error(error)
-        }
     }
 }
 
