@@ -69,6 +69,18 @@ func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFutur
                             )
                     }
                 }
+                .flatMapError { error in
+                    guard let clientError = error as? HTTPClientError,
+                          clientError == .remoteConnectionClosed else {
+                        return client.eventLoopGroup.next().makeFailedFuture(error)
+                    }
+                    hopCount += 1
+                    let delay = 5
+                    print("CONNECTION CLOSED")
+                    print("retrying in \(delay)s ...")
+                    sleep(5)
+                    return _resolveRedirects(client: client, for: url)
+                }
         } catch {
             return client.eventLoopGroup.next().makeFailedFuture(error)
         }
