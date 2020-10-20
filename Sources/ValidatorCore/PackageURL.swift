@@ -15,7 +15,10 @@ extension PackageURL {
 
     func addingGitExtension() -> Self {
         guard !absoluteString.hasSuffix(".git") else { return self }
-        return Self(rawValue: rawValue.appendingPathExtension("git"))
+        let url = URL(string: absoluteString
+                        .trimmingCharacters(in: CharacterSet(charactersIn: "/")))!
+            .appendingPathExtension("git")
+        return Self(rawValue: url)
     }
 
     func deletingGitExtension() -> Self {

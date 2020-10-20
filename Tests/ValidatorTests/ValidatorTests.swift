@@ -23,6 +23,12 @@ final class ValidatorTests: XCTestCase {
     func test_Github_packageList() throws {
         XCTAssertFalse(try Github.packageList().isEmpty)
     }
+
+    func test_addintGitExtension() throws {
+        let s = "https://github.com/weichsel/ZIPFoundation/"
+        XCTAssertEqual(PackageURL(rawValue: URL(string: s)!).addingGitExtension().absoluteString,
+                       "https://github.com/weichsel/ZIPFoundation.git")
+    }
 }
 
 
