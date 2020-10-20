@@ -67,8 +67,13 @@ extension Validator {
                             return packageURL
                         case let .error(error):
                             print("ERROR: \(error)")
-                            // TODO: consider bailing out here, at least for some errors
+                            throw error
+                        case .notFound:
+                            print("package \(index) ...")
+                            print("NOT FOUND:  \(packageURL.absoluteString)")
                             return nil
+                        case .rateLimited:
+                            fatalError("rate limited - should have been retried at a lower level")
                         case .redirected(let url):
                             guard !normalized.contains(url.normalized()) else {
                                 print("DELETE  \(packageURL) -> \(url) (exists)")

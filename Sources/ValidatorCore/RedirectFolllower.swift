@@ -12,6 +12,21 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
         super.init()
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         self.task = session?.dataTask(with: initialURL.rawValue) { [weak self] (_, response, error) in
+            guard error == nil else {
+                completion(.error(error!))
+                return
+            }
+            let response = response as! HTTPURLResponse
+            guard response.statusCode != 404 else {
+                completion(.notFound)
+                return
+            }
+            guard response.statusCode != 429 else {
+                let delay = response.value(forHTTPHeaderField: "Retry-After").flatMap(Int.init)
+                    ?? 60
+                completion(.rateLimited(delay: delay))
+                return
+            }
             completion(self!.status)
         }
         self.task?.resume()
@@ -27,25 +42,21 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
         }
         completionHandler(request)
     }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error {
-            self.status = .error(error)
-        }
-    }
 }
 
 
 enum Redirect {
     case initial(PackageURL)
     case error(Error)
+    case notFound
+    case rateLimited(delay: Int)
     case redirected(to: PackageURL)
 
     var url: PackageURL? {
         switch self {
             case .initial(let url):
                 return url
-            case .error:
+            case .error, .notFound, .rateLimited:
                 return nil
             case .redirected(to: let url):
                 return url
@@ -72,16 +83,35 @@ func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFut
 ///   - url: url to test
 ///   - timeout: request timeout
 /// - Returns: `Redirect`
-func resolvePackageRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
-    resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
-        .map {
-            switch $0 {
-                case .initial:
-                    return .initial(url)
-                case .error:
-                    return $0
-                case .redirected(to: let url):
-                    return .redirected(to: url.addingGitExtension())
+func resolvePackageRedirects(eventLoop: EventLoop,
+                             for url: PackageURL) -> EventLoopFuture<Redirect> {
+    let maxDepth = 10
+    var depth = 0
+
+    func _resolvePackageRedirects(eventLoop: EventLoop,
+                                  for url: PackageURL) -> EventLoopFuture<Redirect> {
+        resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
+            .flatMap { status -> EventLoopFuture<Redirect> in
+                switch status {
+                    case .initial, .notFound, .error:
+                        return eventLoop.makeSucceededFuture(status)
+                    case .rateLimited(let delay):
+                        guard depth < maxDepth else {
+                            return eventLoop.makeFailedFuture(
+                                AppError.runtimeError("recursion limit exceeded")
+                            )
+                        }
+                        depth += 1
+                        print("RATE LIMITED")
+                        print("sleeping for \(delay)s ...")
+                        fflush(stdout)
+                        sleep(UInt32(delay))
+                        return resolvePackageRedirects(eventLoop: eventLoop, for: url)
+                    case .redirected(to: let url):
+                        return eventLoop.makeSucceededFuture(.redirected(to: url.addingGitExtension()))
+                }
             }
-        }
+    }
+
+    return _resolvePackageRedirects(eventLoop: eventLoop, for: url)
 }
