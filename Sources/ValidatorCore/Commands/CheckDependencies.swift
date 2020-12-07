@@ -20,6 +20,9 @@ extension Validator {
         @Argument(help: "Package urls to check")
         var packageUrls: [PackageURL] = []
 
+        @Option(name: .shortAndLong, help: "number of retries")
+        var retries: Int = 3
+
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
 
@@ -57,7 +60,8 @@ extension Validator {
                 .flatMap { packageURL in
                     try [packageURL] +
                         findDependencies(packageURL: packageURL,
-                                         waitIfRateLimited: true)
+                                         waitIfRateLimited: true,
+                                         retries: retries)
                 }
                 .mergingAdditions(with: inputURLs)
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
@@ -112,8 +116,10 @@ func dropNoProducts(client: HTTPClient, packageURLs: [PackageURL]) -> EventLoopF
 }
 
 
-func findDependencies(packageURL: PackageURL, waitIfRateLimited: Bool) throws -> [PackageURL] {
-    try Retry.attempt("Finding dependencies", retries: 3) {
+func findDependencies(packageURL: PackageURL,
+                      waitIfRateLimited: Bool,
+                      retries: Int) throws -> [PackageURL] {
+    try Retry.attempt("Finding dependencies", retries: retries) {
         do {
             let client = HTTPClient(eventLoopGroupProvider: .createNew)
             defer { try? client.syncShutdown() }
