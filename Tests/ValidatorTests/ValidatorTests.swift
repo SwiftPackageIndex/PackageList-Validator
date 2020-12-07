@@ -29,6 +29,24 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(PackageURL(rawValue: URL(string: s)!).addingGitExtension().absoluteString,
                        "https://github.com/weichsel/ZIPFoundation.git")
     }
+
+    func test_decodeResponse() throws {
+        let body = "{\"data\":{\"repository\":{\"defaultBranchRef\":{\"name\":\"swift\"},\"isFork\":true}}}"
+        struct Response: Decodable, Equatable {
+            struct Result: Decodable, Equatable {
+                var repository: Github.Repository
+            }
+            var data: Result
+        }
+        let res = try JSONDecoder().decode(Response.self, from: .init(body.utf8))
+        XCTAssertEqual(
+            res,
+            .init(data: .init(
+                repository: .init(defaultBranchRef: .init(name: "swift"),
+                                  isFork: true)
+            ))
+        )
+    }
 }
 
 

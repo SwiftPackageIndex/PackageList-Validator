@@ -92,7 +92,7 @@ func dropForks(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[Packa
         .map { pairs in
             pairs.filter { (url, repo) in
                 guard let repo = repo else { return false }
-                return !repo.fork
+                return !repo.isFork
             }
             .map { (url, repo) in url }
         }
