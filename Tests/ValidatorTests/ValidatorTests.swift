@@ -5,6 +5,7 @@ import Foundation
 
 
 final class ValidatorTests: XCTestCase {
+
     func test_mergingAdditions() throws {
         XCTAssertEqual(["a"].asURLs.mergingAdditions(with: ["a"].asURLs)
                         .map(\.absoluteString), ["a"])
@@ -31,22 +32,80 @@ final class ValidatorTests: XCTestCase {
     }
 
     func test_decodeResponse() throws {
-        let body = "{\"data\":{\"repository\":{\"defaultBranchRef\":{\"name\":\"swift\"},\"isFork\":true}}}"
-        struct Response: Decodable, Equatable {
-            struct Result: Decodable, Equatable {
-                var repository: Github.Repository
+        let body = """
+            {
+                "data": {
+                    "repository": {
+                        "defaultBranchRef": {
+                            "name": "swift"
+                        },
+                        "isFork": true
+                    }
+                }
             }
-            var data: Result
-        }
-        let res = try JSONDecoder().decode(Response.self, from: .init(body.utf8))
+            """
+        let res = try JSONDecoder().decode(Github.Repository.Response.self,
+                                           from: .init(body.utf8))
         XCTAssertEqual(
-            res,
-            .init(data: .init(
-                repository: .init(defaultBranchRef: .init(name: "swift"),
-                                  isFork: true)
-            ))
+            res.data,
+            .init(repository: .init(defaultBranchRef: .init(name: "swift"),
+                                    isFork: true))
         )
     }
+
+    func test_decodeError() throws {
+        let body = """
+            {
+                "data": {
+                    "repository": null
+                },
+                "errors": [
+                    {
+                        "type": "NOT_FOUND",
+                        "path": [
+                            "repository"
+                        ],
+                        "locations": [
+                            {
+                                "line": 2,
+                                "column": 3
+                            }
+                        ],
+                        "message": "Could not resolve to a Repository with the name 'stephencelis/SQLite'."
+                    }
+                ]
+            }
+            """
+        struct Response: Decodable, Equatable {
+            struct Result: Decodable, Equatable {
+                var repository: Github.Repository?
+            }
+            var data: Result
+            var errors: [Github.GraphQL.Error]?
+        }
+        let res = try JSONDecoder().decode(Response.self, from: .init(body.utf8))
+        XCTAssertEqual(res.data, .init(repository: nil))
+        XCTAssertEqual(res.errors, [
+            .init(type: .notFound,
+                  path: ["repository"],
+                  locations: [.init(line: 2, column: 3)],
+                  message: "Could not resolve to a Repository with the name 'stephencelis/SQLite'.")
+        ])
+    }
+
+    func test_PackageURL_owner_repository() throws {
+        do {
+            let p = PackageURL.init(argument: "https://github.com/stephencelis/SQLite.swift.git")
+            XCTAssertEqual(p?.owner, "stephencelis")
+            XCTAssertEqual(p?.repository, "SQLite.swift")
+        }
+        do {
+            let p = PackageURL.init(argument: "https://github.com/stephencelis/SQLite.swift")
+            XCTAssertEqual(p?.owner, "stephencelis")
+            XCTAssertEqual(p?.repository, "SQLite.swift")
+        }
+    }
+
 }
 
 

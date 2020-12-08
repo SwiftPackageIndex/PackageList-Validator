@@ -15,6 +15,14 @@ enum Github {
         var defaultBranch: String? { defaultBranchRef?.name }
         var defaultBranchRef: DefaultBranchRef?
         var isFork: Bool
+
+        struct Response: Decodable, Equatable {
+            struct Result: Decodable, Equatable {
+                var repository: Repository?
+            }
+            var data: Result
+            var errors: [GraphQL.Error]?
+        }
     }
 
     static func packageList() throws -> [PackageURL] {
@@ -70,7 +78,7 @@ extension Github {
             return client.eventLoopGroup.next().makeSucceededFuture(cached)
         }
 
-        let query = GraphQLQuery(query: """
+        let query = GraphQL.Query(query: """
                 {
                   repository(name: "\(repository)", owner: "\(owner)") {
                     defaultBranchRef {
@@ -81,14 +89,7 @@ extension Github {
                 }
                 """)
 
-        struct Response: Decodable {
-            struct Result: Decodable {
-                var repository: Github.Repository
-            }
-            var data: Result
-        }
-
-        return fetchResource(Response.self,
+        return fetchResource(Repository.Response.self,
                              client: client,
                              query: query)
             .flatMapError { error in
@@ -100,9 +101,12 @@ extension Github {
                 }
                 return eventLoop.makeFailedFuture(error)
             }
-            .map { repo in
-                repositoryCache[Cache.Key(string: url.absoluteString)] = repo.data.repository
-                return repo.data.repository
+            .flatMapThrowing { response in
+                guard let repo = response.data.repository else {
+                    throw AppError.repositoryNotFound(owner: owner, name: repository)
+                }
+                repositoryCache[Cache.Key(string: url.absoluteString)] = repo
+                return repo
             }
     }
 
@@ -135,13 +139,31 @@ extension Github {
 
     static let graphQLApiUrl = "https://api.github.com/graphql"
 
-    struct GraphQLQuery: Codable {
-        var query: String
+    enum GraphQL {
+        struct Query: Codable {
+            var query: String
+        }
+
+        enum ErrorType: String, Decodable, Equatable {
+            case notFound = "NOT_FOUND"
+        }
+
+        struct Location: Decodable, Equatable {
+            var line: Int
+            var column: Int
+        }
+
+        struct Error: Decodable, Equatable {
+            var type: ErrorType
+            var path: [String]
+            var locations: [Location]
+            var message: String
+        }
     }
 
     static func fetchResource<T: Decodable>(_ type: T.Type,
                                             client: HTTPClient,
-                                            query: GraphQLQuery) -> EventLoopFuture<T> {
+                                            query: GraphQL.Query) -> EventLoopFuture<T> {
         let eventLoop = client.eventLoopGroup.next()
         let url = URL(string: graphQLApiUrl)!
 
