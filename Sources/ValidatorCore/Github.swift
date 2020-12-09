@@ -1,28 +1,14 @@
 import AsyncHTTPClient
 import Foundation
 import NIO
-import NIOHTTP1
 
 
 /// Github specific functionality
 enum Github {
 
-    struct DefaultBranchRef: Codable, Equatable {
-        var name: String
-    }
-
-    struct Repository: Codable, Equatable {
-        var defaultBranch: String? { defaultBranchRef?.name }
-        var defaultBranchRef: DefaultBranchRef?
-        var isFork: Bool
-
-        struct Response: Decodable, Equatable {
-            struct Result: Decodable, Equatable {
-                var repository: Repository?
-            }
-            var data: Result
-            var errors: [GraphQL.Error]?
-        }
+    struct Repository: Codable {
+        let default_branch: String
+        let fork: Bool
     }
 
     static func packageList() throws -> [PackageURL] {
@@ -77,21 +63,7 @@ extension Github {
         if let cached = repositoryCache[Cache.Key(string: url.absoluteString)] {
             return client.eventLoopGroup.next().makeSucceededFuture(cached)
         }
-
-        let query = GraphQL.Query(query: """
-                {
-                  repository(name: "\(repository)", owner: "\(owner)") {
-                    defaultBranchRef {
-                      name
-                    }
-                    isFork
-                  }
-                }
-                """)
-
-        return fetchResource(Repository.Response.self,
-                             client: client,
-                             query: query)
+        return fetch(Repository.self, client: client, url: url)
             .flatMapError { error in
                 let eventLoop = client.eventLoopGroup.next()
                 if case AppError.requestFailed(_, 404) = error {
@@ -101,10 +73,7 @@ extension Github {
                 }
                 return eventLoop.makeFailedFuture(error)
             }
-            .flatMapThrowing { response in
-                guard let repo = response.data.repository else {
-                    throw AppError.repositoryNotFound(owner: owner, name: repository)
-                }
+            .map { repo in
                 repositoryCache[Cache.Key(string: url.absoluteString)] = repo
                 return repo
             }
@@ -129,82 +98,6 @@ extension Github {
                 }
         }
         return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
-    }
-}
-
-
-// MARK: - GraphQL
-
-extension Github {
-
-    static let graphQLApiUrl = "https://api.github.com/graphql"
-
-    enum GraphQL {
-        struct Query: Codable {
-            var query: String
-        }
-
-        enum ErrorType: String, Decodable, Equatable {
-            case notFound = "NOT_FOUND"
-        }
-
-        struct Location: Decodable, Equatable {
-            var line: Int
-            var column: Int
-        }
-
-        struct Error: Decodable, Equatable {
-            var type: ErrorType
-            var path: [String]
-            var locations: [Location]
-            var message: String
-        }
-    }
-
-    static func fetchResource<T: Decodable>(_ type: T.Type,
-                                            client: HTTPClient,
-                                            query: GraphQL.Query) -> EventLoopFuture<T> {
-        let eventLoop = client.eventLoopGroup.next()
-        let url = URL(string: graphQLApiUrl)!
-
-        let headers = HTTPHeaders([
-            ("User-Agent", "SPI-Validator"),
-            Current.githubToken().map { ("Authorization", "Bearer \($0)") }
-        ].compactMap({ $0 }))
-
-        do {
-            let body: HTTPClient.Body = .data(try JSONEncoder().encode(query))
-            let request = try HTTPClient.Request(url: graphQLApiUrl,
-                                                 method: .POST,
-                                                 headers: headers,
-                                                 body: body)
-            return client.execute(request: request)
-                .flatMap { response -> EventLoopFuture<T> in
-                    if case let .limited(until: reset) = Github.rateLimitStatus(response) {
-                        return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
-                    }
-                    guard (200...299).contains(response.status.code) else {
-                        return eventLoop.makeFailedFuture(
-                            AppError.requestFailed(url, response.status.code)
-                        )
-                    }
-                    guard let body = response.body else {
-                        return eventLoop.makeFailedFuture(AppError.noData(url))
-                    }
-                    do {
-                        let content = try JSONDecoder().decode(T.self, from: body)
-                        return eventLoop.makeSucceededFuture(content)
-                    } catch {
-                        let json = body.getString(at: 0, length: body.readableBytes) ?? "(nil)"
-                        return eventLoop.makeFailedFuture(
-                            AppError.decodingError(context: url.absoluteString,
-                                                   underlyingError: error,
-                                                   json: json))
-                    }
-                }
-        } catch {
-            return eventLoop.makeFailedFuture(error)
-        }
     }
 
 }
