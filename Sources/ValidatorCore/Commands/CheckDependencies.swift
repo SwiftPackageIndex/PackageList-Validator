@@ -153,11 +153,13 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
                 .map { $0.url.addingGitExtension() }
         }
         .flatMapError { error in
-            if case AppError.dumpPackageError = error {
-                print("INFO: package dump failed: \(error)")
-                return el.makeSucceededFuture([])
+            switch error {
+                case AppError.dumpPackageError, AppError.repositoryNotFound:
+                    print("INFO: Skipping package due to error: \(error)")
+                    return el.makeSucceededFuture([])
+                default:
+                    return el.makeFailedFuture(error)
             }
-            return el.makeFailedFuture(error)
         }
         .flatMap { resolvePackageRedirects(eventLoop: el, urls: $0) }
         .flatMap { dropForks(client: client, urls: $0) }
