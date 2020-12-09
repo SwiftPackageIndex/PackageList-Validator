@@ -20,9 +20,6 @@ extension Validator {
         @Argument(help: "Package urls to check")
         var packageUrls: [PackageURL] = []
 
-        @Option(name: .shortAndLong, help: "number of retries")
-        var retries: Int = 3
-
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
 
@@ -60,8 +57,7 @@ extension Validator {
                 .flatMap { packageURL in
                     try [packageURL] +
                         findDependencies(packageURL: packageURL,
-                                         waitIfRateLimited: true,
-                                         retries: retries)
+                                         waitIfRateLimited: true)
                 }
                 .mergingAdditions(with: inputURLs)
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
@@ -92,7 +88,7 @@ func dropForks(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[Packa
         .map { pairs in
             pairs.filter { (url, repo) in
                 guard let repo = repo else { return false }
-                return !repo.isFork
+                return !repo.fork
             }
             .map { (url, repo) in url }
         }
@@ -116,10 +112,8 @@ func dropNoProducts(client: HTTPClient, packageURLs: [PackageURL]) -> EventLoopF
 }
 
 
-func findDependencies(packageURL: PackageURL,
-                      waitIfRateLimited: Bool,
-                      retries: Int) throws -> [PackageURL] {
-    try Retry.attempt("Finding dependencies", retries: retries) {
+func findDependencies(packageURL: PackageURL, waitIfRateLimited: Bool) throws -> [PackageURL] {
+    try Retry.attempt("Finding dependencies", retries: 3) {
         do {
             let client = HTTPClient(eventLoopGroupProvider: .createNew)
             defer { try? client.syncShutdown() }
@@ -169,4 +163,43 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
             fflush(stdout)
             return urls
         }
+}
+
+
+func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventLoopFuture<T> {
+    let eventLoop = client.eventLoopGroup.next()
+    let headers = HTTPHeaders([
+        ("User-Agent", "SPI-Validator"),
+        Current.githubToken().map { ("Authorization", "Bearer \($0)") }
+    ].compactMap({ $0 }))
+
+    do {
+        let request = try HTTPClient.Request(url: url, method: .GET, headers: headers)
+        return client.execute(request: request)
+            .flatMap { response in
+                if case let .limited(until: reset) = Github.rateLimitStatus(response) {
+                    return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                }
+                guard (200...299).contains(response.status.code) else {
+                    return eventLoop.makeFailedFuture(
+                        AppError.requestFailed(url, response.status.code)
+                    )
+                }
+                guard let body = response.body else {
+                    return eventLoop.makeFailedFuture(AppError.noData(url))
+                }
+                do {
+                    let content = try JSONDecoder().decode(type, from: body)
+                    return eventLoop.makeSucceededFuture(content)
+                } catch {
+                    let json = body.getString(at: 0, length: body.readableBytes) ?? "(nil)"
+                    return eventLoop.makeFailedFuture(
+                        AppError.decodingError(context: url.absoluteString,
+                                               underlyingError: error,
+                                               json: json))
+                }
+            }
+    } catch {
+        return eventLoop.makeFailedFuture(error)
+    }
 }

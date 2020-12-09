@@ -59,13 +59,9 @@ extension Package {
 
     static func getManifestURL(client: HTTPClient, packageURL: PackageURL) -> EventLoopFuture<ManifestURL> {
         Github.fetchRepository(client: client, owner: packageURL.owner, repository: packageURL.repository)
-            .map(\.defaultBranch)
+            .map(\.default_branch)
             .map { defaultBranch in
-                guard let defaultBranch = defaultBranch else {
-                    // it's technically possible this is nil, because DefaultBranchRef is optional in the GraphQL schema but practically this shouldn't happen - nor do we have a way to recover (short of just assuming a branch name, which is bad) - best just fail hard and investigate
-                    fatalError("defaultBranch is nil")
-                }
-                return URL(string: "https://raw.githubusercontent.com/\(packageURL.owner)/\(packageURL.repository)/\(defaultBranch)/Package.swift")!
+                URL(string: "https://raw.githubusercontent.com/\(packageURL.owner)/\(packageURL.repository)/\(defaultBranch)/Package.swift")!
             }
             .map(ManifestURL.init(rawValue:))
     }
