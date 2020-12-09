@@ -5,6 +5,7 @@ import Foundation
 
 
 final class ValidatorTests: XCTestCase {
+
     func test_mergingAdditions() throws {
         XCTAssertEqual(["a"].asURLs.mergingAdditions(with: ["a"].asURLs)
                         .map(\.absoluteString), ["a"])
@@ -29,6 +30,20 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(PackageURL(rawValue: URL(string: s)!).addingGitExtension().absoluteString,
                        "https://github.com/weichsel/ZIPFoundation.git")
     }
+
+    func test_PackageURL_owner_repository() throws {
+        do {
+            let p = PackageURL.init(argument: "https://github.com/stephencelis/SQLite.swift.git")
+            XCTAssertEqual(p?.owner, "stephencelis")
+            XCTAssertEqual(p?.repository, "SQLite.swift")
+        }
+        do {
+            let p = PackageURL.init(argument: "https://github.com/stephencelis/SQLite.swift")
+            XCTAssertEqual(p?.owner, "stephencelis")
+            XCTAssertEqual(p?.repository, "SQLite.swift")
+        }
+    }
+    
 }
 
 

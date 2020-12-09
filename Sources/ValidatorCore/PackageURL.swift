@@ -10,7 +10,7 @@ extension PackageURL {
     var absoluteString: String { rawValue.absoluteString }
     var host: String? { rawValue.host }
     var scheme: String? { rawValue.scheme }
-    var repository: String { rawValue.deletingPathExtension().lastPathComponent }
+    var repository: String { rawValue.deletingGitExtension().lastPathComponent }
     var owner: String { rawValue.deletingLastPathComponent().lastPathComponent }
 
     func addingGitExtension() -> Self {
