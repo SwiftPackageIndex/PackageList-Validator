@@ -150,7 +150,7 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
                 .dependencies
                 .filter { $0.url.scheme == "https" }
                 .filter { $0.url.host?.lowercased() == "github.com" }
-                .map { $0.url.addingGitExtension() }
+                .map { $0.url.appendingGitExtension() }
         }
         .flatMapError { error in
             switch error {
@@ -164,6 +164,7 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
         .flatMap { resolvePackageRedirects(eventLoop: el, urls: $0) }
         .flatMap { dropForks(client: client, urls: $0) }
         .flatMap { dropNoProducts(client: client, packageURLs: $0) }
+        .map { $0.map { $0.appendingGitExtension() } }
         .map { urls in
             urls.forEach {
                 print("  - \($0.absoluteString)")

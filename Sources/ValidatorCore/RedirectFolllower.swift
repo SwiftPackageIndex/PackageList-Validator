@@ -108,7 +108,7 @@ func resolvePackageRedirects(eventLoop: EventLoop,
                         sleep(UInt32(delay))
                         return resolvePackageRedirects(eventLoop: eventLoop, for: url)
                     case .redirected(to: let url):
-                        return eventLoop.makeSucceededFuture(.redirected(to: url.addingGitExtension()))
+                        return eventLoop.makeSucceededFuture(.redirected(to: url.appendingGitExtension()))
                 }
             }
     }
