@@ -13,8 +13,8 @@ extension PackageURL {
     var repository: String { rawValue.deletingGitExtension().lastPathComponent }
     var owner: String { rawValue.deletingLastPathComponent().lastPathComponent }
 
-    func addingGitExtension() -> Self {
-        guard !absoluteString.hasSuffix(".git") else { return self }
+    func appendingGitExtension() -> Self {
+        if rawValue.pathExtension.lowercased() == "git" { return self }
         let url = URL(string: absoluteString
                         .trimmingCharacters(in: CharacterSet(charactersIn: "/")))!
             .appendingPathExtension("git")
