@@ -11,7 +11,7 @@ commit: install
 
 install: version
 	env DEVELOPER_DIR=$(XCODE) xcrun swift build -c release --arch x86_64
-	cp "$(shell env DEVELOPER_DIR=$(XCODE) xcrun swift build -c release --show-bin-path)"/validator .
+	cp "$(shell env DEVELOPER_DIR=$(XCODE) xcrun swift build -c release --arch x86_64 --show-bin-path)"/validator .
 	@# reset version file
 	@git checkout $(VERSION_FILE)
 
