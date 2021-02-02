@@ -47,21 +47,15 @@ extension PackageURL: ExpressibleByArgument {
 
 
 extension Array where Element == PackageURL {
-
-    /// Merge elements with given urls, adding any new ones. Comparison is made between normalised urls.
-    /// - Parameter urls: canonical list of urls
-    func mergingAdditions(with urls: [PackageURL]) -> Self {
-        var result = urls
-        var seen = Set(urls.map(\.absoluteString) + urls.map { $0.normalized() })
-        forEach { url in
+    func uniqued() -> Self {
+        var seen: [String] = []
+        return filter { url in
             let normalized = url.normalized()
             if !seen.contains(normalized) {
-                result.append(url)
-                seen.insert(url.absoluteString)
-                seen.insert(normalized)
+                seen.append(normalized)
+                return true
             }
+            return false
         }
-        return result
     }
-
 }

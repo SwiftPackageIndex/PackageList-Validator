@@ -57,13 +57,16 @@ extension Validator {
 
             let updated = try inputURLs
                 .prefix(prefix)
-                .flatMap { packageURL in
-                    try [packageURL] +
-                        findDependencies(packageURL: packageURL,
-                                         waitIfRateLimited: true,
-                                         retries: retries)
+                .flatMap { packageURL -> [PackageURL] in
+                    do {
+                        return try [packageURL] +
+                            findDependencies(packageURL: packageURL,
+                                             waitIfRateLimited: true,
+                                             retries: retries)
+                    } catch AppError.invalidPackage {
+                        return []
+                    }
                 }
-                .mergingAdditions(with: inputURLs)
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
@@ -133,6 +136,14 @@ func findDependencies(packageURL: PackageURL,
             sleep(delay)
             print("now: \(Date())")
             throw AppError.rateLimited(until: reset)
+        } catch let error as NSError {
+            if error.code == 256
+                && error.localizedDescription == "The file “Package.swift” couldn’t be opened." {
+                print("Warning: invalid package: \(packageURL): \(error.localizedDescription)")
+                throw AppError.invalidPackage(url: packageURL)
+            }
+            print("ERROR: \(error)")
+            throw error
         } catch {
             print("ERROR: \(error)")
             throw error
