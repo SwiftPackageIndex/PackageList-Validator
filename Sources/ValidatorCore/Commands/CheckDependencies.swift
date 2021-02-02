@@ -67,6 +67,7 @@ extension Validator {
                         return []
                     }
                 }
+                .uniqued()
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
