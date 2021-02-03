@@ -80,7 +80,7 @@ extension Validator {
 
 func resolvePackageRedirects(eventLoop: EventLoop, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
     let requests = urls.map {
-        resolvePackageRedirects(eventLoop: eventLoop, for: $0)
+        Current.resolvePackageRedirects(eventLoop, $0)
             .map(\.url)
     }
     let flattened = EventLoopFuture.whenAllSucceed(requests, on: eventLoop)
@@ -112,7 +112,7 @@ func dropNoProducts(client: HTTPClient, packageURLs: [PackageURL]) -> EventLoopF
     return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
         .map { pairs in
             pairs.filter { (_, manifestURL) in
-                guard let pkg = try? Package.decode(from: manifestURL) else { return false }
+                guard let pkg = try? Current.decodeManifest(manifestURL) else { return false }
                 return !pkg.products.isEmpty
             }
             .map { (packageURL, _) in packageURL }
@@ -158,7 +158,7 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
     print("Dependencies for \(url.absoluteString) ...")
     return Package.getManifestURL(client: client, packageURL: url)
         .flatMapThrowing {
-            try Package.decode(from: $0)
+            try Current.decodeManifest($0)
                 .dependencies
                 .filter { $0.url.scheme == "https" }
                 .filter { $0.url.host?.lowercased() == "github.com" }

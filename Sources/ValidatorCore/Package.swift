@@ -58,7 +58,7 @@ extension Package {
     typealias ManifestURL = Tagged<Manifest, URL>
 
     static func getManifestURL(client: HTTPClient, packageURL: PackageURL) -> EventLoopFuture<ManifestURL> {
-        Github.fetchRepository(client: client, owner: packageURL.owner, repository: packageURL.repository)
+        Current.fetchRepository(client, packageURL.owner, packageURL.repository)
             .map(\.default_branch)
             .map { defaultBranch in
                 URL(string: "https://raw.githubusercontent.com/\(packageURL.owner)/\(packageURL.repository)/\(defaultBranch)/Package.swift")!

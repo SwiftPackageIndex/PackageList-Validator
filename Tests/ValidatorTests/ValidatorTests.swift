@@ -1,10 +1,17 @@
 import XCTest
 
+import AsyncHTTPClient
 import Foundation
+import NIO
 @testable import ValidatorCore
 
 
 final class ValidatorTests: XCTestCase {
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        Current = .mock
+    }
 
     func test_unique() throws {
         XCTAssertEqual(["a"].asURLs.uniqued().map(\.absoluteString),
@@ -41,7 +48,32 @@ final class ValidatorTests: XCTestCase {
             XCTAssertEqual(p?.repository, "SQLite.swift")
         }
     }
-    
+
+    func test_findDependencies() throws {
+        // Basic findDependencies test
+        // setup
+        Current.decodeManifest = { url in .init(
+            name: "bar",
+            products: [
+                .init(name: "prod")
+            ],
+            dependencies: [
+                .init(name: "a",
+                      url: PackageURL(argument: "https://github.com/dep/A")!)
+            ]) }
+        Current.fetchRepository = { client, _, _ in
+            client.eventLoopGroup.next().makeSucceededFuture(Github.Repository(default_branch: "main", fork: false))
+        }
+
+        // MUT
+        let url = PackageURL(argument: "https://github.com/foo/bar")!
+        let urls = try findDependencies(packageURL: url, waitIfRateLimited: false, retries: 0)
+
+        // validate
+        XCTAssertEqual(urls,
+                       [PackageURL(argument: "https://github.com/dep/A.git")!])
+    }
+
 }
 
 
