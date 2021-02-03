@@ -119,6 +119,37 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(urls, [A, B, x, y, z])
     }
 
+    func test_expandDependencies_normalising() throws {
+        // Ensure dependency URLs are properly normalised and case preserving
+
+        // setup
+        let A = PackageURL(argument: "https://github.com/foo/A.git")!
+        let B = PackageURL(argument: "https://github.com/foo/B.git")!
+        let x = PackageURL(argument: "https://github.com/foo/x")!
+        let Y = PackageURL(argument: "https://github.com/foo/Y")!
+        let z = PackageURL(argument: "https://github.com/foo/z")!
+        let a = PackageURL(argument: "https://github.com/foo/a")!
+        let x_git = PackageURL(argument: "https://github.com/foo/x.git")!
+        let Y_git = PackageURL(argument: "https://github.com/foo/Y.git")!
+        let z_git = PackageURL(argument: "https://github.com/foo/z.git")!
+        Current.decodeManifest = { url in
+            switch url {
+                case .init("https://raw.githubusercontent.com/foo/A/main/Package.swift"):
+                    return .mock(dependencyURLs: [x, Y])
+                case .init("https://raw.githubusercontent.com/foo/B/main/Package.swift"):
+                    return .mock(dependencyURLs: [z, a])
+                default:
+                    return .mock(dependencyURLs: [])
+            }
+        }
+
+        // MUT
+        let urls = try expandDependencies(inputURLs: [A, B], retries: 0)
+
+        // validate
+        XCTAssertEqual(urls, [A, B, x_git, Y_git, z_git])
+    }
+
 }
 
 
