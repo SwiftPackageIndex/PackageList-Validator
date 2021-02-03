@@ -51,30 +51,41 @@ extension Validator {
             }
 
             let inputURLs = try inputSource.packageURLs()
-            let prefix = limit ?? inputURLs.count
 
-            print("Checking dependencies (\(prefix) packages) ...")
+            print("Checking dependencies (\(limit ?? inputURLs.count) packages) ...")
 
-            let updated = try inputURLs
-                .prefix(prefix)
-                .flatMap { packageURL -> [PackageURL] in
-                    do {
-                        return try [packageURL] +
-                            findDependencies(packageURL: packageURL,
-                                             waitIfRateLimited: true,
-                                             retries: retries)
-                    } catch AppError.invalidPackage {
-                        return []
-                    }
-                }
-                .uniqued()
-                .sorted(by: { $0.lowercased() < $1.lowercased() })
+            let updated = try expandDependencies(inputURLs: inputURLs,
+                                                 limit: limit,
+                                                 retries: retries)
 
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)
             }
         }
     }
+}
+
+
+/// Checks and expands dependencies from a set of input package URLs. The list of output URLs is unique, sorted, and will preserve the capitalization of the first URL encountered.
+/// - Parameter inputURLs: package URLs to inspect
+/// - Returns: complete list of package URLs, including the input set
+func expandDependencies(inputURLs: [PackageURL],
+                        limit: Int? = nil,
+                        retries: Int) throws -> [PackageURL] {
+    try inputURLs
+        .prefix(limit ?? inputURLs.count)
+        .flatMap { packageURL -> [PackageURL] in
+            do {
+                return try [packageURL] +
+                    findDependencies(packageURL: packageURL,
+                                     waitIfRateLimited: true,
+                                     retries: retries)
+            } catch AppError.invalidPackage {
+                return []
+            }
+        }
+        .uniqued()
+        .sorted(by: { $0.lowercased() < $1.lowercased() })
 }
 
 

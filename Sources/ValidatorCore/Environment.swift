@@ -33,7 +33,9 @@ extension Environment {
     static let mock: Self = .init(
         decodeManifest: { _ in fatalError("not implemented") },
         fileManager: .mock,
-        fetchRepository: { _, _, _ in fatalError("not implemented") },
+        fetchRepository: { client, _, _ in
+            client.eventLoopGroup.next().makeSucceededFuture(
+                Github.Repository(default_branch: "main", fork: false)) },
         githubToken: { nil },
         resolvePackageRedirects: { eventLoop, url in
             eventLoop.makeSucceededFuture(.initial(url))
