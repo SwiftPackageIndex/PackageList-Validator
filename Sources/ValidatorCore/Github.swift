@@ -87,7 +87,7 @@ extension Github {
     /// - Returns: list of `(PackageURL, Repository?)` pairs
     static func fetchRepositories(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[(PackageURL, Repository?)]> {
         let req: [EventLoopFuture<(PackageURL, Repository?)>] = urls.map { url -> EventLoopFuture<(PackageURL, Repository?)> in
-            fetchRepository(client: client, owner: url.owner, repository: url.repository)
+            Current.fetchRepository(client, url.owner, url.repository)
                 .map { (url, $0) }
                 .flatMapError { error -> EventLoopFuture<(PackageURL, Repository?)> in
                     // convert 'repository not found' into nil value

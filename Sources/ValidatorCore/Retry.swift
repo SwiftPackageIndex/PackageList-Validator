@@ -18,6 +18,8 @@ enum Retry {
             }
             do {
                 return try block()
+            } catch let AppError.invalidPackage(url) {
+                throw AppError.invalidPackage(url: url)
             } catch {
                 guard retriesLeft > 0 else { break }
                 let delay = backedOffDelay(baseDelay: delay, tryCount: currentTry)

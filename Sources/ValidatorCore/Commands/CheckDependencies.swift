@@ -51,20 +51,12 @@ extension Validator {
             }
 
             let inputURLs = try inputSource.packageURLs()
-            let prefix = limit ?? inputURLs.count
 
-            print("Checking dependencies (\(prefix) packages) ...")
+            print("Checking dependencies (\(limit ?? inputURLs.count) packages) ...")
 
-            let updated = try inputURLs
-                .prefix(prefix)
-                .flatMap { packageURL in
-                    try [packageURL] +
-                        findDependencies(packageURL: packageURL,
-                                         waitIfRateLimited: true,
-                                         retries: retries)
-                }
-                .mergingAdditions(with: inputURLs)
-                .sorted(by: { $0.lowercased() < $1.lowercased() })
+            let updated = try expandDependencies(inputURLs: inputURLs,
+                                                 limit: limit,
+                                                 retries: retries)
 
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)
@@ -74,9 +66,32 @@ extension Validator {
 }
 
 
+/// Checks and expands dependencies from a set of input package URLs. The list of output URLs is unique, sorted, and will preserve the capitalization of the first URL encountered.
+/// - Parameter inputURLs: package URLs to inspect
+/// - Returns: complete list of package URLs, including the input set
+func expandDependencies(inputURLs: [PackageURL],
+                        limit: Int? = nil,
+                        retries: Int) throws -> [PackageURL] {
+    try inputURLs
+        .prefix(limit ?? inputURLs.count)
+        .flatMap { packageURL -> [PackageURL] in
+            do {
+                return try [packageURL] +
+                    findDependencies(packageURL: packageURL,
+                                     waitIfRateLimited: true,
+                                     retries: retries)
+            } catch AppError.invalidPackage {
+                return []
+            }
+        }
+        .uniqued()
+        .sorted(by: { $0.lowercased() < $1.lowercased() })
+}
+
+
 func resolvePackageRedirects(eventLoop: EventLoop, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
     let requests = urls.map {
-        resolvePackageRedirects(eventLoop: eventLoop, for: $0)
+        Current.resolvePackageRedirects(eventLoop, $0)
             .map(\.url)
     }
     let flattened = EventLoopFuture.whenAllSucceed(requests, on: eventLoop)
@@ -108,7 +123,7 @@ func dropNoProducts(client: HTTPClient, packageURLs: [PackageURL]) -> EventLoopF
     return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
         .map { pairs in
             pairs.filter { (_, manifestURL) in
-                guard let pkg = try? Package.decode(from: manifestURL) else { return false }
+                guard let pkg = try? Current.decodeManifest(manifestURL) else { return false }
                 return !pkg.products.isEmpty
             }
             .map { (packageURL, _) in packageURL }
@@ -133,6 +148,14 @@ func findDependencies(packageURL: PackageURL,
             sleep(delay)
             print("now: \(Date())")
             throw AppError.rateLimited(until: reset)
+        } catch let error as NSError {
+            if error.code == 256
+                && error.localizedDescription == "The file “Package.swift” couldn’t be opened." {
+                print("Warning: invalid package: \(packageURL): \(error.localizedDescription)")
+                throw AppError.invalidPackage(url: packageURL)
+            }
+            print("ERROR: \(error)")
+            throw error
         } catch {
             print("ERROR: \(error)")
             throw error
@@ -146,7 +169,7 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
     print("Dependencies for \(url.absoluteString) ...")
     return Package.getManifestURL(client: client, packageURL: url)
         .flatMapThrowing {
-            try Package.decode(from: $0)
+            try Current.decodeManifest($0)
                 .dependencies
                 .filter { $0.url.scheme == "https" }
                 .filter { $0.url.host?.lowercased() == "github.com" }

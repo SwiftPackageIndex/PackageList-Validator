@@ -1,30 +1,46 @@
+import AsyncHTTPClient
 import Foundation
+import NIO
 
 
 struct Environment {
+    var decodeManifest: (_ url: Package.ManifestURL) throws -> Package
     var fileManager: FileManager
+    var fetchRepository: (_ client: HTTPClient,
+                          _ owner: String,
+                          _ repository: String) -> EventLoopFuture<Github.Repository>
     var githubToken: () -> String?
+    var resolvePackageRedirects: (EventLoop, PackageURL) -> EventLoopFuture<Redirect>
     var shell: Shell
 }
 
 
 extension Environment {
     static let live: Self = .init(
+        decodeManifest: { url in try Package.decode(from: url) },
         fileManager: .live,
+        fetchRepository: { client, owner, repository in
+            Github.fetchRepository(client: client,
+                                   owner: owner,
+                                   repository: repository) },
         githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
+        resolvePackageRedirects: { eventLoop, url in
+            resolveRedirects(eventLoop: eventLoop, for: url)
+        },
         shell: .live
     )
-}
 
-
-extension FileManager {
-    static let live: Self = .init(
-        createDirectory: Foundation.FileManager.default
-            .createDirectory(atPath:withIntermediateDirectories:attributes:),
-        createFile: Foundation.FileManager.default.createFile(atPath:contents:attributes:),
-        fileExists: Foundation.FileManager.default.fileExists(atPath:),
-        removeItem: Foundation.FileManager.default.removeItem(atPath:),
-        temporaryDirectory: { Foundation.FileManager.default.temporaryDirectory }
+    static let mock: Self = .init(
+        decodeManifest: { _ in fatalError("not implemented") },
+        fileManager: .mock,
+        fetchRepository: { client, _, _ in
+            client.eventLoopGroup.next().makeSucceededFuture(
+                Github.Repository(default_branch: "main", fork: false)) },
+        githubToken: { nil },
+        resolvePackageRedirects: { eventLoop, url in
+            eventLoop.makeSucceededFuture(.initial(url))
+        },
+        shell: .mock
     )
 }
 

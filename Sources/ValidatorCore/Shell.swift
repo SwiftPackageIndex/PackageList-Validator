@@ -16,4 +16,8 @@ struct Shell {
                               outputHandle: stdout,
                               errorHandle: stderr)
     })
+
+    static let mock: Self = .init(
+        run: { _, _, _, _ in fatalError("not implemented") }
+    )
 }
