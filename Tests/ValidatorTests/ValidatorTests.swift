@@ -121,7 +121,6 @@ final class ValidatorTests: XCTestCase {
 
     func test_expandDependencies_normalising() throws {
         // Ensure dependency URLs are properly normalised and case preserving
-
         // setup
         let A = PackageURL(argument: "https://github.com/foo/A.git")!
         let B = PackageURL(argument: "https://github.com/foo/B.git")!
@@ -150,6 +149,28 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(urls, [A, B, x_git, Y_git, z_git])
     }
 
+    func test_issue_917() throws {
+        // Ensure we don't change existing package's capitalisation
+        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/917
+        // setup
+        let p1 = PackageURL(argument:
+                                "https://github.com/1fr3dg/ResourcePackage.git")!
+        let dep = PackageURL(argument:
+                                "https://github.com/1Fr3dG/SimpleEncrypter.git")!
+        let p2 = PackageURL(argument:
+                                "https://github.com/1fr3dg/SimpleEncrypter.git")!
+        Current.decodeManifest = { url in
+            url == .init("https://raw.githubusercontent.com/1fr3dg/ResourcePackage/main/Package.swift")
+            ? .mock(dependencyURLs: [dep])
+            : .mock(dependencyURLs: [])
+        }
+
+        // MUT
+        let urls = try expandDependencies(inputURLs: [p1, p2], retries: 0)
+
+        // validate
+        XCTAssertEqual(urls, [p1, p2])
+    }
 }
 
 
