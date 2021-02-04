@@ -51,13 +51,9 @@ extension Array where Element == PackageURL {
     /// - Parameter urls: existing package URLs
     /// - Returns: updated list of package URLs
     func mergingWithExisting(urls: [PackageURL]) -> Self {
-        var result = urls
-        var seen = Set(urls.map { $0.normalized() })
-        forEach { url in
-            if seen.insert(url.normalized()).inserted {
-                result.append(url)
-            }
+        var seen = Set<String>()
+        return (urls + self).compactMap {
+            seen.insert($0.normalized()).inserted ? $0 : nil
         }
-        return result
     }
 }
