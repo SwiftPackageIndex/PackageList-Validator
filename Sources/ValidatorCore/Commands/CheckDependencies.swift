@@ -76,15 +76,14 @@ func expandDependencies(inputURLs: [PackageURL],
         .prefix(limit ?? inputURLs.count)
         .flatMap { packageURL -> [PackageURL] in
             do {
-                return try [packageURL] +
-                    findDependencies(packageURL: packageURL,
-                                     waitIfRateLimited: true,
-                                     retries: retries)
+                return try findDependencies(packageURL: packageURL,
+                                            waitIfRateLimited: true,
+                                            retries: retries)
             } catch AppError.invalidPackage {
                 return []
             }
         }
-        .uniqued()
+        .mergingWithExisting(urls: inputURLs)
         .sorted(by: { $0.lowercased() < $1.lowercased() })
 }
 

@@ -47,15 +47,13 @@ extension PackageURL: ExpressibleByArgument {
 
 
 extension Array where Element == PackageURL {
-    func uniqued() -> Self {
-        var seen: [String] = []
-        return filter { url in
-            let normalized = url.normalized()
-            if !seen.contains(normalized) {
-                seen.append(normalized)
-                return true
-            }
-            return false
+    /// Merge package URLs with list of existing package URLs, giving the existing package urls priority, in order to preserve their capitalisation.
+    /// - Parameter urls: existing package URLs
+    /// - Returns: updated list of package URLs
+    func mergingWithExisting(urls: [PackageURL]) -> Self {
+        var seen = Set<String>()
+        return (urls + self).compactMap {
+            seen.insert($0.normalized()).inserted ? $0 : nil
         }
     }
 }
