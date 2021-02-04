@@ -52,12 +52,12 @@ extension Array where Element == PackageURL {
     /// - Returns: updated list of package URLs
     func mergingWithExisting(urls: [PackageURL]) -> Self {
         var result = urls
-        var seen = urls.map { $0.normalized() }
+        var seen = Set(urls.map { $0.normalized() })
         forEach { url in
             let normalized = url.normalized()
             if !seen.contains(normalized) {
                 result.append(url)
-                seen.append(normalized)
+                seen.insert(normalized)
             }
         }
         return result
