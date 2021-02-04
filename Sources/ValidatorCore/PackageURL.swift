@@ -54,10 +54,8 @@ extension Array where Element == PackageURL {
         var result = urls
         var seen = Set(urls.map { $0.normalized() })
         forEach { url in
-            let normalized = url.normalized()
-            if !seen.contains(normalized) {
+            if seen.insert(url.normalized()).inserted {
                 result.append(url)
-                seen.insert(normalized)
             }
         }
         return result
