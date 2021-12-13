@@ -184,9 +184,11 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
         .flatMapThrowing {
             try Current.decodeManifest($0)
                 .dependencies
-                .filter { $0.url.scheme == "https" }
-                .filter { $0.url.host?.lowercased() == "github.com" }
-                .map { $0.url.appendingGitExtension() }
+                .compactMap { $0.scm.first }
+                .map(\.location)
+                .filter { $0.scheme == "https" }
+                .filter { $0.host?.lowercased() == "github.com" }
+                .map { $0.appendingGitExtension() }
         }
         .flatMapError { error in
             switch error {

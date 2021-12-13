@@ -89,8 +89,7 @@ final class ValidatorTests: XCTestCase {
                 .init(name: "prod")
             ],
             dependencies: [
-                .init(name: "a",
-                      url: PackageURL(argument: "https://github.com/dep/A")!)
+                .init(location: PackageURL(argument: "https://github.com/dep/A")!)
             ]) }
 
         // MUT
@@ -187,6 +186,18 @@ final class ValidatorTests: XCTestCase {
         // validate
         XCTAssertEqual(urls, [p1, p2])
     }
+
+    func test_issue_1449() throws {
+        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1449
+        // setup
+        let data = try fixtureData(for: "Issue1449-5.5.json")
+
+        // MUT
+        let pkg = try JSONDecoder().decode(Package.self, from: data)
+
+        // validate
+        XCTAssertEqual(pkg.name, "validator")
+    }
 }
 
 
@@ -194,8 +205,7 @@ extension Package {
     static func mock(dependencyURLs: [PackageURL]) -> Self {
         .init(name: "",
               products: [.mock],
-              dependencies: dependencyURLs.map { .init(name: "",
-                                                       url: $0) } )
+              dependencies: dependencyURLs.map { .init(location: $0) } )
     }
 }
 
@@ -216,5 +226,14 @@ private extension Array where Element == String {
 private extension Package.ManifestURL {
     init(_ urlString: String) {
         self.init(rawValue: URL(string: urlString)!)
+    }
+}
+
+
+private extension Package.Dependency {
+    init(location: PackageURL) {
+        self.init(scm: [
+            .init(location: location)
+        ])
     }
 }

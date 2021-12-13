@@ -38,6 +38,8 @@ let package = Package(
                 "ShellOut",
                 .product(name: "Tagged", package: "swift-tagged")
             ]),
-        .testTarget(name: "ValidatorTests", dependencies: ["ValidatorCore"]),
+        .testTarget(name: "ValidatorTests",
+                    dependencies: ["ValidatorCore"],
+                    exclude: ["Fixtures"]),
     ]
 )
