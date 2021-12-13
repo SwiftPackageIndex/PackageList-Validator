@@ -191,7 +191,7 @@ final class ValidatorTests: XCTestCase {
     func test_issue_1449() throws {
         // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1449
         // setup
-        let data = try fixtureData(for: "Issue1449-5.3.json")
+        let data = try fixtureData(for: "Issue1449-5.5.json")
 
         // MUT
         let pkg = try JSONDecoder().decode(Package.self, from: data)
