@@ -89,8 +89,7 @@ final class ValidatorTests: XCTestCase {
                 .init(name: "prod")
             ],
             dependencies: [
-                .init(name: "a",
-                      url: PackageURL(argument: "https://github.com/dep/A")!)
+                .init(location: PackageURL(argument: "https://github.com/dep/A")!)
             ]) }
 
         // MUT
@@ -206,8 +205,7 @@ extension Package {
     static func mock(dependencyURLs: [PackageURL]) -> Self {
         .init(name: "",
               products: [.mock],
-              dependencies: dependencyURLs.map { .init(name: "",
-                                                       url: $0) } )
+              dependencies: dependencyURLs.map { .init(location: $0) } )
     }
 }
 
@@ -228,5 +226,14 @@ private extension Array where Element == String {
 private extension Package.ManifestURL {
     init(_ urlString: String) {
         self.init(rawValue: URL(string: urlString)!)
+    }
+}
+
+
+private extension Package.Dependency {
+    init(location: PackageURL) {
+        self.init(scm: [
+            .init(location: location)
+        ])
     }
 }

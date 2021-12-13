@@ -29,8 +29,11 @@ struct Package: Codable {
     }
 
     struct Dependency: Codable, Hashable {
-        let name: String
-        let url: PackageURL
+        var scm: [SCM]
+
+        struct SCM: Codable, Hashable {
+            let location: PackageURL
+        }
     }
 }
 
