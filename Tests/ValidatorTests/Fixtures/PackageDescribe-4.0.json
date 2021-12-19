@@ -1,0 +1,55 @@
+{
+  "dependencies" : [
+
+  ],
+  "name" : "Alamofire",
+  "path" : "/Users/sas/Downloads/alamofire",
+  "platforms" : [
+
+  ],
+  "products" : [
+    {
+      "name" : "Alamofire",
+      "targets" : [
+        "Alamofire"
+      ],
+      "type" : {
+        "library" : [
+          "automatic"
+        ]
+      }
+    }
+  ],
+  "targets" : [
+    {
+      "c99name" : "Alamofire",
+      "module_type" : "SwiftTarget",
+      "name" : "Alamofire",
+      "path" : "Source",
+      "product_memberships" : [
+        "Alamofire"
+      ],
+      "sources" : [
+        "AFError.swift",
+        "Alamofire.swift",
+        "DispatchQueue+Alamofire.swift",
+        "MultipartFormData.swift",
+        "NetworkReachabilityManager.swift",
+        "Notifications.swift",
+        "ParameterEncoding.swift",
+        "Request.swift",
+        "Response.swift",
+        "ResponseSerialization.swift",
+        "Result.swift",
+        "ServerTrustPolicy.swift",
+        "SessionDelegate.swift",
+        "SessionManager.swift",
+        "TaskDelegate.swift",
+        "Timeline.swift",
+        "Validation.swift"
+      ],
+      "type" : "library"
+    }
+  ],
+  "tools_version" : "4.0"
+}

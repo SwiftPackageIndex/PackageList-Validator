@@ -191,7 +191,7 @@ final class ValidatorTests: XCTestCase {
     func test_issue_1449_DecodingError() throws {
         // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1449
         // setup
-        let data = try fixtureData(for: "Issue1449-5.5.json")
+        let data = try fixtureData(for: "Issue1449.json")
 
         // MUT
         let pkg = try JSONDecoder().decode(Package.self, from: data)
@@ -210,6 +210,18 @@ final class ValidatorTests: XCTestCase {
 
         // validate
         XCTAssertEqual(pkg.name, "Bow OpenAPI")
+    }
+
+    func test_package_describe_backwards_compatibility() throws {
+        // Test decoding the output of package describe when run on packages
+        // with old tools versions.
+        for toolsVersion in ["4.0", "4.2", "5.0", "5.1", "5.2", "5.3", "5.4", "5.5"] {
+            let pkg = try JSONDecoder().decode(
+                Package.self,
+                from: try fixtureData(for: "PackageDescribe-\(toolsVersion).json")
+            )
+            XCTAssertEqual(pkg.name, "Alamofire", "failed for \(toolsVersion)")
+        }
     }
 }
 
