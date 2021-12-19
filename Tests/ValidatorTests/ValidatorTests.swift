@@ -187,7 +187,7 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(urls, [p1, p2])
     }
 
-    func test_issue_1449() throws {
+    func test_issue_1449_DecodingError() throws {
         // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1449
         // setup
         let data = try fixtureData(for: "Issue1449-5.5.json")
@@ -197,6 +197,18 @@ final class ValidatorTests: XCTestCase {
 
         // validate
         XCTAssertEqual(pkg.name, "validator")
+    }
+
+    func test_issue_1461_DecodingError() throws {
+        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1461
+        // setup
+        let data = try fixtureData(for: "Issue1461.json")
+
+        // MUT
+        let pkg = try JSONDecoder().decode(Package.self, from: data)
+
+        // validate
+        XCTAssertEqual(pkg.name, "Bow OpenAPI")
     }
 }
 
