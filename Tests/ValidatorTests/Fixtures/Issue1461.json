@@ -1,107 +1,68 @@
 {
-  "cLanguageStandard" : null,
-  "cxxLanguageStandard" : null,
   "dependencies" : [
     {
-      "scm" : [
-        {
-          "identity" : "bow",
-          "location" : "https://github.com/bow-swift/bow.git",
-          "name" : "Bow",
-          "productFilter" : null,
-          "requirement" : {
-            "exact" : [
-              "0.8.0"
-            ]
-          }
-        }
-      ]
+      "identity" : "bow",
+      "name" : "Bow",
+      "requirement" : {
+        "exact" : [
+          "0.8.0"
+        ]
+      },
+      "url" : "https://github.com/bow-swift/bow.git"
     },
     {
-      "scm" : [
-        {
-          "identity" : "swift-argument-parser",
-          "location" : "https://github.com/apple/swift-argument-parser.git",
-          "productFilter" : null,
-          "requirement" : {
-            "exact" : [
-              "0.2.1"
-            ]
-          }
-        }
-      ]
+      "identity" : "swift-argument-parser",
+      "requirement" : {
+        "exact" : [
+          "0.2.1"
+        ]
+      },
+      "url" : "https://github.com/apple/swift-argument-parser.git"
     },
     {
-      "scm" : [
-        {
-          "identity" : "swiftline",
-          "location" : "https://github.com/bow-swift/Swiftline.git",
-          "productFilter" : null,
-          "requirement" : {
-            "exact" : [
-              "0.5.6"
-            ]
-          }
-        }
-      ]
+      "identity" : "swiftline",
+      "requirement" : {
+        "exact" : [
+          "0.5.6"
+        ]
+      },
+      "url" : "https://github.com/bow-swift/Swiftline.git"
     },
     {
-      "scm" : [
-        {
-          "identity" : "swift-snapshot-testing",
-          "location" : "https://github.com/pointfreeco/swift-snapshot-testing.git",
-          "name" : "SnapshotTesting",
-          "productFilter" : null,
-          "requirement" : {
-            "exact" : [
-              "1.7.2"
-            ]
-          }
-        }
-      ]
+      "identity" : "swift-snapshot-testing",
+      "name" : "SnapshotTesting",
+      "requirement" : {
+        "exact" : [
+          "1.7.2"
+        ]
+      },
+      "url" : "https://github.com/pointfreeco/swift-snapshot-testing.git"
     },
     {
-      "scm" : [
-        {
-          "identity" : "swiftcheck",
-          "location" : "https://github.com/bow-swift/SwiftCheck.git",
-          "productFilter" : null,
-          "requirement" : {
-            "exact" : [
-              "0.12.1"
-            ]
-          }
-        }
-      ]
+      "identity" : "swiftcheck",
+      "requirement" : {
+        "exact" : [
+          "0.12.1"
+        ]
+      },
+      "url" : "https://github.com/bow-swift/SwiftCheck.git"
     },
     {
-      "local" : [
-        {
-          "identity" : "fixturesapi",
-          "path" : "/Users/sas/Downloads/bow-openapi/Tests/Fixtures/FixturesAPI",
-          "productFilter" : null
-        }
-      ]
+      "identity" : "fixturesapi",
+      "url" : "/Users/sas/Downloads/bow-openapi/Tests/Fixtures/FixturesAPI"
     }
   ],
   "name" : "Bow OpenAPI",
-  "packageKind" : "root",
-  "pkgConfig" : null,
+  "path" : "/Users/sas/Downloads/bow-openapi",
   "platforms" : [
     {
-      "options" : [
-
-      ],
-      "platformName" : "macos",
+      "name" : "macos",
       "version" : "10.14"
     }
   ],
   "products" : [
     {
       "name" : "bow-openapi",
-      "settings" : [
-
-      ],
       "targets" : [
         "CLI"
       ],
@@ -110,157 +71,85 @@
       }
     }
   ],
-  "providers" : null,
-  "swiftLanguageVersions" : null,
   "targets" : [
     {
-      "dependencies" : [
-        {
-          "product" : [
-            "Bow",
-            "Bow",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "BowEffects",
-            "Bow",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "BowOptics",
-            "Bow",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "Swiftline",
-            "Swiftline",
-            null
-          ]
-        }
-      ],
-      "exclude" : [
-
-      ],
-      "name" : "OpenApiGenerator",
-      "path" : "OpenApiGenerator",
-      "resources" : [
-
-      ],
-      "settings" : [
-
-      ],
-      "type" : "regular"
-    },
-    {
-      "dependencies" : [
-        {
-          "target" : [
-            "OpenApiGenerator",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "ArgumentParser",
-            "swift-argument-parser",
-            null
-          ]
-        }
-      ],
-      "exclude" : [
-
-      ],
-      "name" : "CLI",
-      "path" : "BowOpenAPI",
-      "resources" : [
-
-      ],
-      "settings" : [
-
-      ],
-      "type" : "regular"
-    },
-    {
-      "dependencies" : [
-        {
-          "target" : [
-            "OpenApiGenerator",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "Bow",
-            "Bow",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "BowEffects",
-            "Bow",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "BowOptics",
-            "Bow",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "SnapshotTesting",
-            "SnapshotTesting",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "SwiftCheck",
-            "SwiftCheck",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "FixturesAPI",
-            "FixturesAPI",
-            null
-          ]
-        },
-        {
-          "product" : [
-            "FixturesAPITest",
-            "FixturesAPI",
-            null
-          ]
-        }
-      ],
-      "exclude" : [
-        "__Snapshots__",
-        "Fixtures",
-        "Support Files"
-      ],
+      "c99name" : "OpenApiGeneratorTests",
+      "module_type" : "SwiftTarget",
       "name" : "OpenApiGeneratorTests",
       "path" : "Tests",
-      "resources" : [
-
+      "sources" : [
+        "APIClientDocumentationTests.swift",
+        "APIClientGeneratorTests.swift",
+        "APIClientHttpOperationTests.swift",
+        "APIClientModelsTests.swift",
+        "APIClientParametersTests.swift",
+        "APIClientSendTests.swift",
+        "APIConfigTests.swift",
+        "APIHelperTests.swift",
+        "GeneratorAPIClientTests.swift",
+        "GeneratorSwaggerClientTests.swift",
+        "Mocks/ClientGeneratorMock.swift",
+        "Mocks/FileSystemMock.swift",
+        "Mocks/Mother.swift",
+        "PackageGeneratedTests.swift",
+        "Utils/API+Generators.swift",
+        "Utils/IO+Error.swift",
+        "Utils/Snapshotting+OpenAPI.swift",
+        "Utils/URL+FileSystem.swift",
+        "Utils/URL+Paths.swift"
       ],
-      "settings" : [
-
+      "target_dependencies" : [
+        "OpenApiGenerator"
       ],
       "type" : "test"
+    },
+    {
+      "c99name" : "OpenApiGenerator",
+      "module_type" : "SwiftTarget",
+      "name" : "OpenApiGenerator",
+      "path" : "OpenApiGenerator",
+      "product_memberships" : [
+        "bow-openapi"
+      ],
+      "sources" : [
+        "APIClient.swift",
+        "Algebra/ClientGenerator.swift",
+        "Algebra/FileSystem.swift",
+        "Environment.swift",
+        "Error/APIClientError.swift",
+        "Error/FileSystemError.swift",
+        "Error/GeneratorError.swift",
+        "MacFileSystem.swift",
+        "Models/OpenAPIModule.swift",
+        "SwaggerClientGenerator.swift",
+        "Utils/IO+APIClient.swift",
+        "Utils/String+Format.swift",
+        "Utils/String+Path.swift"
+      ],
+      "target_dependencies" : [
+
+      ],
+      "type" : "library"
+    },
+    {
+      "c99name" : "CLI",
+      "module_type" : "SwiftTarget",
+      "name" : "CLI",
+      "path" : "BowOpenAPI",
+      "product_memberships" : [
+        "bow-openapi"
+      ],
+      "sources" : [
+        "BowOpenAPICommand.swift",
+        "Utils/Kleisli+Console.swift",
+        "Utils/String+File.swift",
+        "main.swift"
+      ],
+      "target_dependencies" : [
+        "OpenApiGenerator"
+      ],
+      "type" : "executable"
     }
   ],
-  "toolsVersion" : {
-    "_version" : "5.2.0"
-  }
+  "tools_version" : "5.2"
 }
