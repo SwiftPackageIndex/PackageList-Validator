@@ -25,7 +25,12 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
         self.status = .initial(initialURL)
         super.init()
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        self.task = session?.dataTask(with: initialURL.rawValue) { [weak self] (_, response, error) in
+        var req = URLRequest(url: initialURL.rawValue)
+        req.addValue("SPI-Validator", forHTTPHeaderField: "User-Agent")
+        if let token = Current.githubToken() {
+            req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        self.task = session?.dataTask(with: req) { [weak self] (_, response, error) in
             guard error == nil else {
                 completion(.error(error?.localizedDescription ?? "unknown error"))
                 return
@@ -37,7 +42,7 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
             }
             guard response.statusCode != 429 else {
                 let delay = response.value(forHTTPHeaderField: "Retry-After").flatMap(Int.init)
-                    ?? 60
+                    ?? 5
                 completion(.rateLimited(delay: delay))
                 return
             }
