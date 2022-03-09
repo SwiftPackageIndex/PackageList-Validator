@@ -33,10 +33,10 @@ jobs:
     - name: Check redirects
       run: ./run-redirects.sh
       env:
-        DEVELOPER_DIR: /Applications/Xcode_13.1.app
+        DEVELOPER_DIR: /Applications/Xcode_13.2.1.app
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Check dependencies
       run: ./run-dependencies.sh
       env:
-        DEVELOPER_DIR: /Applications/Xcode_13.1.app
+        DEVELOPER_DIR: /Applications/Xcode_13.2.1.app
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
