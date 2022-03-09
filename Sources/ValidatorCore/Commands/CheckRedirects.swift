@@ -56,6 +56,43 @@ extension Validator {
             }
         }
 
+        static func handle(redirect: Redirect,
+                           verbose: Bool,
+                           index: Int,
+                           packageURL: PackageURL,
+                           normalized: inout Set<String>) throws -> PackageURL? {
+            if verbose || index % 50 == 0 {
+                print("package \(index) ...")
+                fflush(stdout)
+            }
+            switch redirect {
+                case .initial:
+                    if verbose {
+                        print("        \(packageURL.absoluteString)")
+                    }
+                    return packageURL
+                case let .error(error):
+                    print("ERROR: \(error)")
+                    throw AppError.resolveRedirectsFailed(packageURL, error: error)
+                case .notFound:
+                    print("package \(index) ...")
+                    print("NOT FOUND:  \(packageURL.absoluteString)")
+                    return nil
+                case .rateLimited:
+                    fatalError("rate limited - should have been retried at a lower level")
+                case .redirected(let url):
+                    guard !normalized.contains(url.normalized()) else {
+                        print("DELETE  \(packageURL) -> \(url) (exists)")
+                        return nil
+                    }
+                    print("ADD     \(packageURL) -> \(url) (new)")
+                    _ = DispatchQueue.main.sync {
+                        normalized.insert(url.normalized())
+                    }
+                    return url
+            }
+        }
+
         mutating func run() throws {
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
@@ -63,41 +100,21 @@ extension Validator {
             print("Checking for redirects (\(prefix) packages) ...")
 
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-            var normalized = inputURLs.map { $0.normalized() }
-            let updated = try inputURLs
+            var normalized = Set(inputURLs.map { $0.normalized() })
+            let updates = inputURLs
                 .prefix(prefix)
                 .enumerated()
-                .compactMap { (index, packageURL) -> PackageURL? in
-                    if verbose || index % 50 == 0 {
-                        print("package \(index) ...")
-                        fflush(stdout)
-                    }
-                    switch try resolvePackageRedirects(eventLoop: elg.next(),
-                                                       for: packageURL).wait() {
-                        case .initial:
-                            if verbose {
-                                print("        \(packageURL.absoluteString)")
-                            }
-                            return packageURL
-                        case let .error(error):
-                            print("ERROR: \(error)")
-                            throw error
-                        case .notFound:
-                            print("package \(index) ...")
-                            print("NOT FOUND:  \(packageURL.absoluteString)")
-                            return nil
-                        case .rateLimited:
-                            fatalError("rate limited - should have been retried at a lower level")
-                        case .redirected(let url):
-                            guard !normalized.contains(url.normalized()) else {
-                                print("DELETE  \(packageURL) -> \(url) (exists)")
-                                return nil
-                            }
-                            print("ADD     \(packageURL) -> \(url) (new)")
-                            normalized.append(url.normalized())
-                            return url
-                    }
+                .map { (index, packageURL) -> EventLoopFuture<PackageURL?> in
+                    let verbose = verbose
+                    return resolvePackageRedirects(eventLoop: elg.next(),
+                                                   for: packageURL)
+                        .flatMapThrowing { redirect in
+                            try Self.handle(redirect: redirect, verbose: verbose, index: index, packageURL: packageURL, normalized: &normalized)
+                        }
                 }
+            let updated = try EventLoopFuture.whenAllSucceed(updates, on: elg.next())
+                .wait()
+                .compactMap { $0 }
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {

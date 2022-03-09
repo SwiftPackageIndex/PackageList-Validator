@@ -24,6 +24,7 @@ enum AppError: Error {
     case rateLimited(until: Date)
     case repositoryNotFound(owner: String, name: String)
     case requestFailed(URL, UInt)
+    case resolveRedirectsFailed(PackageURL, error: String)
     case retryLimitExceeded
     case runtimeError(String)
 }

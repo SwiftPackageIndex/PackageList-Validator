@@ -27,7 +27,7 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         self.task = session?.dataTask(with: initialURL.rawValue) { [weak self] (_, response, error) in
             guard error == nil else {
-                completion(.error(error!))
+                completion(.error(error?.localizedDescription ?? "unknown error"))
                 return
             }
             let response = response as! HTTPURLResponse
@@ -59,9 +59,9 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
 }
 
 
-enum Redirect {
+enum Redirect: Equatable {
     case initial(PackageURL)
-    case error(Error)
+    case error(String)
     case notFound
     case rateLimited(delay: Int)
     case redirected(to: PackageURL)
