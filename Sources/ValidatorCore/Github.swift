@@ -39,27 +39,30 @@ extension Github {
 
     enum RateLimitStatus {
         case limited(until: Date)
-        case ok
+        case ok(remaining: Int, reset: Date)
         case unknown
     }
 
 
     static func rateLimitStatus(_ response: HTTPClient.Response) -> RateLimitStatus {
-        if
-            response.status == .forbidden,
-            let remaining = response.headers.first(name: "X-RateLimit-Remaining")
+        guard let remaining = response.headers.first(name: "X-RateLimit-Remaining")
                 .flatMap(Int.init),
-            let reset = response.headers.first(name: "X-RateLimit-Reset")
+              let reset = response.headers.first(name: "X-RateLimit-Reset")
                 .flatMap(TimeInterval.init)
                 .flatMap(Date.init(timeIntervalSince1970:))
-             {
+        else {
+            return .unknown
+        }
+
+        if response.status == .forbidden {
             if remaining == 0 {
                 return .limited(until: reset)
             } else {
                 return .unknown
             }
         }
-        return .ok
+
+        return .ok(remaining: remaining, reset: reset)
     }
 
 }

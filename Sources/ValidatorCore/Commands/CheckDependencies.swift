@@ -218,13 +218,19 @@ func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventL
         ("User-Agent", "SPI-Validator"),
         Current.githubToken().map { ("Authorization", "Bearer \($0)") }
     ].compactMap({ $0 }))
+    let rateLimitHeadroom = 20
 
     do {
         let request = try HTTPClient.Request(url: url, method: .GET, headers: headers)
         return client.execute(request: request)
             .flatMap { response in
-                if case let .limited(until: reset) = Github.rateLimitStatus(response) {
-                    return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                switch Github.rateLimitStatus(response) {
+                    case let .limited(until: reset):
+                        return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                    case let .ok(remaining: remaining, reset: reset) where remaining < rateLimitHeadroom:
+                        return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                    case .ok, .unknown:
+                        break
                 }
                 guard (200...299).contains(response.status.code) else {
                     return eventLoop.makeFailedFuture(
