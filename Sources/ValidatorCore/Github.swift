@@ -72,6 +72,24 @@ extension Github {
 
 extension Github {
 
+    struct RateLimit: Decodable {
+        var limit: Int
+        var used: Int
+        var remaining: Int
+        var reset: Int
+    }
+
+
+    static func getRateLimit(client: HTTPClient, token: String) -> EventLoopFuture<RateLimit> {
+        struct Response: Decodable {
+            var rate: RateLimit
+        }
+        let url = URL(string: "https://api.github.com/rate_limit")!
+        return fetch(Response.self, client: client, url: url)
+            .map(\.rate)
+    }
+
+
     static var repositoryCache = Cache<Repository>()
 
 
