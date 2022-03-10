@@ -26,21 +26,6 @@ enum Redirect: Equatable {
 }
 
 
-func getRedirect(client: HTTPClient, url: String) throws -> Redirect {
-    let req = try HTTPClient.Request(url: url, headers: .spiAuth)
-    let res = try client.execute(request: req,
-                                          deadline: .now() + .seconds(5)).wait()
-    guard res.status != .notFound else { return .notFound }
-    guard res.status != .tooManyRequests else {
-        return .rateLimited(delay: res.headers.retryAfter)
-    }
-    if let location = res.headers.first(name: "Location") {
-        return .redirected(to: location)
-    }
-    return .initial(url)
-}
-
-
 struct RedirectFollower {
     struct Client {
         private var client: HTTPClient
@@ -57,20 +42,28 @@ struct RedirectFollower {
         func syncShutdown() throws {
             try client.syncShutdown()
         }
+
+        var eventLoop: EventLoop { client.eventLoopGroup.next() }
     }
 
-    static func resolve(client: Client, url: String) throws -> Redirect {
-        let req = try HTTPClient.Request(url: url, headers: .spiAuth)
-        let res = try client.execute(request: req,
-                                     deadline: .now() + .seconds(5)).wait()
-        guard res.status != .notFound else { return .notFound }
-        guard res.status != .tooManyRequests else {
-            return .rateLimited(delay: res.headers.retryAfter)
+    static func resolve(client: Client, url: String) -> EventLoopFuture<Redirect> {
+        do {
+            let req = try HTTPClient.Request(url: url, headers: .spiAuth)
+            return client.execute(request: req,
+                                  deadline: .now() + .seconds(5))
+                .map { res -> Redirect in
+                    guard res.status != .notFound else { return .notFound }
+                    guard res.status != .tooManyRequests else {
+                        return .rateLimited(delay: res.headers.retryAfter)
+                    }
+                    if let location = res.headers.first(name: "Location") {
+                        return .redirected(to: location)
+                    }
+                    return .initial(url)
+                }
+        } catch {
+            return client.eventLoop.makeFailedFuture(error)
         }
-        if let location = res.headers.first(name: "Location") {
-            return .redirected(to: location)
-        }
-        return .initial(url)
     }
 }
 

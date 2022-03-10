@@ -241,7 +241,9 @@ final class ValidatorTests: XCTestCase {
     func test_RedirectFollower_2() throws {
         let client = RedirectFollower.Client()
         defer { try? client.syncShutdown() }
-        let r = try RedirectFollower.resolve(client: client, url: "https://github.com/finestructure/Arena.git")
+        let r = try RedirectFollower
+            .resolve(client: client,
+                     url: "https://github.com/finestructure/Arena.git").wait()
         XCTAssertEqual(r, .redirected(to: "https://github.com/finestructure/Arena"))
     }
 }
