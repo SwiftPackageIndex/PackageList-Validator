@@ -56,11 +56,11 @@ extension Validator {
             }
         }
 
-        static func handle(redirect: Redirect,
-                           verbose: Bool,
-                           index: Int,
-                           packageURL: PackageURL,
-                           normalized: inout Set<String>) throws -> PackageURL? {
+        static func process(redirect: Redirect,
+                            verbose: Bool,
+                            index: Int,
+                            packageURL: PackageURL,
+                            normalized: inout Set<String>) throws -> PackageURL? {
             if verbose || index % 50 == 0 {
                 print("package \(index) ...")
                 fflush(stdout)
@@ -108,7 +108,11 @@ extension Validator {
                 .compactMap { (index, packageURL) in
                     try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL)
                         .flatMapThrowing { redirect in
-                            try Self.handle(redirect: redirect, verbose: verbose, index: index, packageURL: packageURL, normalized: &normalized)
+                            try Self.process(redirect: redirect,
+                                             verbose: verbose,
+                                             index: index,
+                                             packageURL: packageURL,
+                                             normalized: &normalized)
                         }.wait()
                 }
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
