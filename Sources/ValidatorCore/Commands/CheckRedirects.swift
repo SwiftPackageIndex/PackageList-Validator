@@ -94,6 +94,7 @@ extension Validator {
         }
 
         mutating func run() throws {
+            let verbose = verbose
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
 
@@ -101,20 +102,15 @@ extension Validator {
 
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
             var normalized = Set(inputURLs.map { $0.normalized() })
-            let updates = inputURLs
+            let updated = try inputURLs
                 .prefix(prefix)
                 .enumerated()
-                .map { (index, packageURL) -> EventLoopFuture<PackageURL?> in
-                    let verbose = verbose
-                    return resolvePackageRedirects(eventLoop: elg.next(),
-                                                   for: packageURL)
+                .compactMap { (index, packageURL) in
+                    try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL)
                         .flatMapThrowing { redirect in
                             try Self.handle(redirect: redirect, verbose: verbose, index: index, packageURL: packageURL, normalized: &normalized)
-                        }
+                        }.wait()
                 }
-            let updated = try EventLoopFuture.whenAllSucceed(updates, on: elg.next())
-                .wait()
-                .compactMap { $0 }
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
