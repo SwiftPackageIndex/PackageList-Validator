@@ -15,6 +15,7 @@
 import ArgumentParser
 import Foundation
 import NIO
+import AsyncHTTPClient
 
 
 extension Validator {
@@ -97,6 +98,8 @@ extension Validator {
             let verbose = verbose
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
+            let httpClient = HTTPClient(eventLoopGroupProvider: .createNew)
+            defer { try? httpClient.syncShutdown() }
 
             print("Checking for redirects (\(prefix) packages) ...")
 
@@ -107,12 +110,22 @@ extension Validator {
                 .enumerated()
                 .compactMap { (index, packageURL) in
                     try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL)
-                        .flatMapThrowing { redirect in
-                            try Self.process(redirect: redirect,
-                                             verbose: verbose,
-                                             index: index,
-                                             packageURL: packageURL,
-                                             normalized: &normalized)
+                        .flatMapThrowing { redirect -> PackageURL? in
+                            if index % 100 == 0, let token = Current.githubToken() {
+                                let rateLimit = try Github.getRateLimit(client: httpClient,
+                                                                        token: token).wait()
+                                if rateLimit.remaining < 200 {
+                                    print("Rate limit remaining: \(rateLimit.remaining)")
+                                    print("Sleeping until reset at \(rateLimit.resetDate) ...")
+                                    sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
+                                }
+                            }
+
+                            return try Self.process(redirect: redirect,
+                                                    verbose: verbose,
+                                                    index: index,
+                                                    packageURL: packageURL,
+                                                    normalized: &normalized)
                         }.wait()
                 }
                 .sorted(by: { $0.lowercased() < $1.lowercased() })

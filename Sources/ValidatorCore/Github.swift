@@ -77,6 +77,14 @@ extension Github {
         var used: Int
         var remaining: Int
         var reset: Int
+
+        var resetDate: Date {
+            Date(timeIntervalSince1970: TimeInterval(reset))
+        }
+
+        var secondsUntilReset: TimeInterval {
+            resetDate.timeIntervalSinceNow
+        }
     }
 
 
