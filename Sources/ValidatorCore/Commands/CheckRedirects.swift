@@ -113,19 +113,16 @@ extension Validator {
 //            }
 
             var normalized = Set(inputURLs.map { $0.normalized() })
-            let updates = inputURLs
+            let updated = try inputURLs
                 .prefix(prefix)
                 .enumerated()
-                .map { (index, packageURL) -> EventLoopFuture<PackageURL?> in
+                .compactMap { (index, packageURL) -> PackageURL? in
                     let verbose = verbose
-                    return Current.resolvePackageRedirects(client, packageURL)
+                    return try Current.resolvePackageRedirects(client, packageURL)
                         .flatMapThrowing { redirect in
                             try Self.handle(redirect: redirect, verbose: verbose, index: index, packageURL: packageURL, normalized: &normalized)
-                        }
+                        }.wait()
                 }
-            let updated = try EventLoopFuture.whenAllSucceed(updates, on: elg.next())
-                .wait()
-                .compactMap { $0 }
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
