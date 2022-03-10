@@ -15,6 +15,7 @@
 import ArgumentParser
 import Foundation
 import NIO
+import AsyncHTTPClient
 
 
 extension Validator {
@@ -56,7 +57,7 @@ extension Validator {
             }
         }
 
-        static func handle(redirect: Redirect,
+        static func handle(redirect: _Redirect,
                            verbose: Bool,
                            index: Int,
                            packageURL: PackageURL,
@@ -100,6 +101,12 @@ extension Validator {
             print("Checking for redirects (\(prefix) packages) ...")
 
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            let client = HTTPClient(eventLoopGroupProvider: .createNew)
+            if let token = Current.githubToken() {
+                let rate = try Github.getRateLimit(client: client, token: token).wait()
+                dump(rate)
+            }
+
             var normalized = Set(inputURLs.map { $0.normalized() })
             let updates = inputURLs
                 .prefix(prefix)

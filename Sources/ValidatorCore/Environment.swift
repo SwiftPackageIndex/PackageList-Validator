@@ -24,7 +24,7 @@ struct Environment {
                           _ owner: String,
                           _ repository: String) -> EventLoopFuture<Github.Repository>
     var githubToken: () -> String?
-    var resolvePackageRedirects: (EventLoop, PackageURL) -> EventLoopFuture<Redirect>
+    var resolvePackageRedirects: (EventLoop, PackageURL) -> EventLoopFuture<_Redirect>
     var shell: Shell
 }
 

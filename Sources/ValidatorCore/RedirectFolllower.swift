@@ -12,16 +12,94 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import AsyncHTTPClient
 import Foundation
 import NIO
+import NIOHTTP1
 
 
-class RedirectFollower: NSObject, URLSessionTaskDelegate {
-    var status: Redirect
+enum Redirect: Equatable {
+    case initial(String)
+    case notFound
+    case rateLimited(delay: Int)
+    case redirected(to: String)
+}
+
+
+func getRedirect(client: HTTPClient, url: String) throws -> Redirect {
+    let req = try HTTPClient.Request(url: url, headers: .spiAuth)
+    let res = try client.execute(request: req,
+                                          deadline: .now() + .seconds(5)).wait()
+    guard res.status != .notFound else { return .notFound }
+    guard res.status != .tooManyRequests else {
+        return .rateLimited(delay: res.headers.retryAfter)
+    }
+    if let location = res.headers.first(name: "Location") {
+        return .redirected(to: location)
+    }
+    return .initial(url)
+}
+
+
+struct RedirectFollower {
+    struct Client {
+        private var client: HTTPClient
+
+        init() {
+            client = HTTPClient(eventLoopGroupProvider: .createNew,
+                                configuration: .init(redirectConfiguration: .disallow))
+        }
+
+        func execute(request: HTTPClient.Request, deadline: NIODeadline? = nil) -> EventLoopFuture<HTTPClient.Response> {
+            client.execute(request: request, deadline: deadline)
+        }
+
+        func syncShutdown() throws {
+            try client.syncShutdown()
+        }
+    }
+
+    static func resolve(client: Client, url: String) throws -> Redirect {
+        let req = try HTTPClient.Request(url: url, headers: .spiAuth)
+        let res = try client.execute(request: req,
+                                     deadline: .now() + .seconds(5)).wait()
+        guard res.status != .notFound else { return .notFound }
+        guard res.status != .tooManyRequests else {
+            return .rateLimited(delay: res.headers.retryAfter)
+        }
+        if let location = res.headers.first(name: "Location") {
+            return .redirected(to: location)
+        }
+        return .initial(url)
+    }
+}
+
+
+extension HTTPHeaders {
+    static var spiAuth: Self {
+        var headers = HTTPHeaders.init([("User-Agent", "SPI-Validator")])
+        if let token = Current.githubToken() {
+            headers.add(name: "Authorization", value: "Bearer \(token)")
+        }
+        return headers
+    }
+
+    var retryAfter: Int {
+        first(name: "Retry-After").flatMap(Int.init) ?? 5
+    }
+}
+
+
+// MARK: - old impl
+
+
+@available(*, deprecated)
+class _RedirectFollower: NSObject, URLSessionTaskDelegate {
+    var status: _Redirect
     var session: URLSession?
     var task: URLSessionDataTask?
 
-    init(initialURL: PackageURL, completion: @escaping (Redirect) -> Void) {
+    init(initialURL: PackageURL, completion: @escaping (_Redirect) -> Void) {
         self.status = .initial(initialURL)
         super.init()
         self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
@@ -64,7 +142,8 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
 }
 
 
-enum Redirect: Equatable {
+@available(*, deprecated)
+enum _Redirect: Equatable {
     case initial(PackageURL)
     case error(String)
     case notFound
@@ -84,10 +163,11 @@ enum Redirect: Equatable {
 }
 
 
-func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
-    let promise = eventLoop.next().makePromise(of: Redirect.self)
+@available(*, deprecated)
+func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<_Redirect> {
+    let promise = eventLoop.next().makePromise(of: _Redirect.self)
 
-    let _ = RedirectFollower(initialURL: url) { result in
+    let _ = _RedirectFollower(initialURL: url) { result in
         promise.succeed(result)
     }
 
@@ -102,15 +182,16 @@ func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFut
 ///   - url: url to test
 ///   - timeout: request timeout
 /// - Returns: `Redirect`
+@available(*, deprecated)
 func resolvePackageRedirects(eventLoop: EventLoop,
-                             for url: PackageURL) -> EventLoopFuture<Redirect> {
+                             for url: PackageURL) -> EventLoopFuture<_Redirect> {
     let maxDepth = 10
     var depth = 0
 
     func _resolvePackageRedirects(eventLoop: EventLoop,
-                                  for url: PackageURL) -> EventLoopFuture<Redirect> {
+                                  for url: PackageURL) -> EventLoopFuture<_Redirect> {
         resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
-            .flatMap { status -> EventLoopFuture<Redirect> in
+            .flatMap { status -> EventLoopFuture<_Redirect> in
                 switch status {
                     case .initial, .notFound, .error:
                         return eventLoop.makeSucceededFuture(status)
