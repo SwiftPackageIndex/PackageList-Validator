@@ -73,7 +73,7 @@ extension Validator {
                     return packageURL
                 case let .error(error):
                     print("ERROR: \(error)")
-                    throw AppError.resolveRedirectsFailed(packageURL, error: error)
+                    return nil
                 case .notFound:
                     print("package \(index) ...")
                     print("NOT FOUND:  \(packageURL.absoluteString)")

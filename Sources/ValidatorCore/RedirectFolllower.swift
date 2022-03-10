@@ -32,7 +32,7 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
         }
         self.task = session?.dataTask(with: req) { [weak self] (_, response, error) in
             guard error == nil else {
-                completion(.error(error?.localizedDescription ?? "unknown error"))
+                completion(.error("\(error)"))
                 return
             }
             let response = response as! HTTPURLResponse
