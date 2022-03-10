@@ -18,15 +18,29 @@ import NIO
 import NIOHTTP1
 
 
-enum Redirect: Equatable {
+enum Redirect {
     case initial(String)
+    case error(String)
     case notFound
     case rateLimited(delay: Int)
     case redirected(to: String)
 }
 
+extension Redirect {
+    var packageURL: PackageURL? {
+        switch self {
+            case .initial(let url):
+                return .init(argument: url)
+            case .error, .notFound, .rateLimited:
+                return nil
+            case .redirected(to: let url):
+                return .init(argument: url)
+        }
+    }
+}
 
-struct RedirectFollower {
+
+enum RedirectFollower {
     struct Client {
         private var client: HTTPClient
 
@@ -49,8 +63,7 @@ struct RedirectFollower {
     static func resolve(client: Client, url: String) -> EventLoopFuture<Redirect> {
         do {
             let req = try HTTPClient.Request(url: url, headers: .spiAuth)
-            return client.execute(request: req,
-                                  deadline: .now() + .seconds(5))
+            return client.execute(request: req)
                 .map { res -> Redirect in
                     guard res.status != .notFound else { return .notFound }
                     guard res.status != .tooManyRequests else {
@@ -60,6 +73,9 @@ struct RedirectFollower {
                         return .redirected(to: location)
                     }
                     return .initial(url)
+                }
+                .flatMapError {
+                    client.eventLoop.makeSucceededFuture(.error("\($0)"))
                 }
         } catch {
             return client.eventLoop.makeFailedFuture(error)
@@ -83,128 +99,51 @@ extension HTTPHeaders {
 }
 
 
-// MARK: - old impl
+extension RedirectFollower {
+    /// Resolve redirects for package urls. In particular, this strips the `.git` extension from the test url, because it would always lead to a redirect. It also normalizes the output to always have a `.git` extension.
+    /// - Parameters:
+    ///   - eventLoop: EventLoop
+    ///   - url: url to test
+    ///   - timeout: request timeout
+    /// - Returns: `Redirect`
+    static func resolvePackageRedirects(client: RedirectFollower.Client,
+                                        url: PackageURL) -> EventLoopFuture<Redirect> {
+        let maxDepth = 10
+        var depth = 0
 
-
-@available(*, deprecated)
-class _RedirectFollower: NSObject, URLSessionTaskDelegate {
-    var status: _Redirect
-    var session: URLSession?
-    var task: URLSessionDataTask?
-
-    init(initialURL: PackageURL, completion: @escaping (_Redirect) -> Void) {
-        self.status = .initial(initialURL)
-        super.init()
-        self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        var req = URLRequest(url: initialURL.rawValue)
-        req.addValue("SPI-Validator", forHTTPHeaderField: "User-Agent")
-        if let token = Current.githubToken() {
-            req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        self.task = session?.dataTask(with: req) { [weak self] (_, response, error) in
-            guard error == nil else {
-                completion(.error(error?.localizedDescription ?? "unknown error"))
-                return
-            }
-            let response = response as! HTTPURLResponse
-            guard response.statusCode != 404 else {
-                completion(.notFound)
-                return
-            }
-            guard response.statusCode != 429 else {
-                let delay = response.value(forHTTPHeaderField: "Retry-After").flatMap(Int.init)
-                    ?? 5
-                completion(.rateLimited(delay: delay))
-                return
-            }
-            completion(self!.status)
-        }
-        self.task?.resume()
-    }
-
-    func urlSession(_ session: URLSession,
-                    task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) {
-        if let newURL = request.url {
-            self.status = .redirected(to: PackageURL(rawValue: newURL))
-        }
-        completionHandler(request)
-    }
-}
-
-
-@available(*, deprecated)
-enum _Redirect: Equatable {
-    case initial(PackageURL)
-    case error(String)
-    case notFound
-    case rateLimited(delay: Int)
-    case redirected(to: PackageURL)
-
-    var url: PackageURL? {
-        switch self {
-            case .initial(let url):
-                return url
-            case .error, .notFound, .rateLimited:
-                return nil
-            case .redirected(to: let url):
-                return url
-        }
-    }
-}
-
-
-@available(*, deprecated)
-func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<_Redirect> {
-    let promise = eventLoop.next().makePromise(of: _Redirect.self)
-
-    let _ = _RedirectFollower(initialURL: url) { result in
-        promise.succeed(result)
-    }
-
-    return promise.futureResult
-}
-
-
-
-/// Resolve redirects for package urls. In particular, this strips the `.git` extension from the test url, because it would always lead to a redirect. It also normalizes the output to always have a `.git` extension.
-/// - Parameters:
-///   - eventLoop: EventLoop
-///   - url: url to test
-///   - timeout: request timeout
-/// - Returns: `Redirect`
-@available(*, deprecated)
-func resolvePackageRedirects(eventLoop: EventLoop,
-                             for url: PackageURL) -> EventLoopFuture<_Redirect> {
-    let maxDepth = 10
-    var depth = 0
-
-    func _resolvePackageRedirects(eventLoop: EventLoop,
-                                  for url: PackageURL) -> EventLoopFuture<_Redirect> {
-        resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
-            .flatMap { status -> EventLoopFuture<_Redirect> in
-                switch status {
-                    case .initial, .notFound, .error:
-                        return eventLoop.makeSucceededFuture(status)
-                    case .rateLimited(let delay):
-                        guard depth < maxDepth else {
-                            return eventLoop.makeFailedFuture(
-                                AppError.runtimeError("recursion limit exceeded")
-                            )
-                        }
-                        depth += 1
-                        print("RATE LIMITED")
-                        print("sleeping for \(delay)s ...")
-                        fflush(stdout)
-                        sleep(UInt32(delay))
-                        return resolvePackageRedirects(eventLoop: eventLoop, for: url)
-                    case .redirected(to: let url):
-                        return eventLoop.makeSucceededFuture(.redirected(to: url.appendingGitExtension()))
+        func _resolvePackageRedirects(client: RedirectFollower.Client,
+                                      url: PackageURL) -> EventLoopFuture<Redirect> {
+            RedirectFollower.resolve(client: client,
+                                     url: url.deletingGitExtension().absoluteString)
+                .flatMap { status -> EventLoopFuture<Redirect> in
+                    switch status {
+                        case .error, .initial, .notFound:
+                            return client.eventLoop.makeSucceededFuture(status)
+                        case .rateLimited(let delay):
+                            guard depth < maxDepth else {
+                                return client.eventLoop.makeFailedFuture(
+                                    AppError.runtimeError("recursion limit exceeded")
+                                )
+                            }
+                            depth += 1
+                            print("RATE LIMITED")
+                            print("sleeping for \(delay)s ...")
+                            fflush(stdout)
+                            sleep(UInt32(delay))
+                            return resolvePackageRedirects(client: client, url: url)
+                        case .redirected(to: let url):
+                            return client.eventLoop.makeSucceededFuture(.redirected(to: url.appendingGitExtension()))
+                    }
                 }
-            }
-    }
+        }
 
-    return _resolvePackageRedirects(eventLoop: eventLoop, for: url)
+        return _resolvePackageRedirects(client: client, url: url)
+    }
+}
+
+
+extension String {
+    func appendingGitExtension() -> Self {
+        lowercased().hasSuffix(".git") ? self : self + ".git"
+    }
 }

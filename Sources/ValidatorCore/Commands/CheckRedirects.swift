@@ -57,7 +57,7 @@ extension Validator {
             }
         }
 
-        static func handle(redirect: _Redirect,
+        static func handle(redirect: Redirect,
                            verbose: Bool,
                            index: Int,
                            packageURL: PackageURL,
@@ -74,7 +74,7 @@ extension Validator {
                     return packageURL
                 case let .error(error):
                     print("ERROR: \(error)")
-                    throw AppError.resolveRedirectsFailed(packageURL, error: error)
+                    return nil
                 case .notFound:
                     print("package \(index) ...")
                     print("NOT FOUND:  \(packageURL.absoluteString)")
@@ -82,15 +82,16 @@ extension Validator {
                 case .rateLimited:
                     fatalError("rate limited - should have been retried at a lower level")
                 case .redirected(let url):
-                    guard !normalized.contains(url.normalized()) else {
+                    guard let pkgURL = PackageURL(argument: url) else { return nil }
+                    guard !normalized.contains(pkgURL.normalized()) else {
                         print("DELETE  \(packageURL) -> \(url) (exists)")
                         return nil
                     }
                     print("ADD     \(packageURL) -> \(url) (new)")
                     _ = DispatchQueue.main.sync {
-                        normalized.insert(url.normalized())
+                        normalized.insert(pkgURL.normalized())
                     }
-                    return url
+                    return pkgURL
             }
         }
 
@@ -101,11 +102,15 @@ extension Validator {
             print("Checking for redirects (\(prefix) packages) ...")
 
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-            let client = HTTPClient(eventLoopGroupProvider: .createNew)
-            if let token = Current.githubToken() {
-                let rate = try Github.getRateLimit(client: client, token: token).wait()
-                dump(rate)
-            }
+            let client = RedirectFollower.Client()
+            defer { try? client.syncShutdown() }
+
+            #warning("add rate limit check")
+//            let client = HTTPClient(eventLoopGroupProvider: .createNew)
+//            if let token = Current.githubToken() {
+//                let rate = try Github.getRateLimit(client: client, token: token).wait()
+//                dump(rate)
+//            }
 
             var normalized = Set(inputURLs.map { $0.normalized() })
             let updates = inputURLs
@@ -113,8 +118,7 @@ extension Validator {
                 .enumerated()
                 .map { (index, packageURL) -> EventLoopFuture<PackageURL?> in
                     let verbose = verbose
-                    return resolvePackageRedirects(eventLoop: elg.next(),
-                                                   for: packageURL)
+                    return Current.resolvePackageRedirects(client, packageURL)
                         .flatMapThrowing { redirect in
                             try Self.handle(redirect: redirect, verbose: verbose, index: index, packageURL: packageURL, normalized: &normalized)
                         }

@@ -102,12 +102,12 @@ func expandDependencies(inputURLs: [PackageURL],
 }
 
 
-func resolvePackageRedirects(eventLoop: EventLoop, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
+func resolvePackageRedirects(client: RedirectFollower.Client, urls: [PackageURL]) -> EventLoopFuture<[PackageURL]> {
     let requests = urls.map {
-        Current.resolvePackageRedirects(eventLoop, $0)
-            .map(\.url)
+        Current.resolvePackageRedirects(client, $0)
+            .map(\.packageURL)
     }
-    let flattened = EventLoopFuture.whenAllSucceed(requests, on: eventLoop)
+    let flattened = EventLoopFuture.whenAllSucceed(requests, on: client.eventLoop)
     return flattened.map {
         // drop nil urls
         $0.compactMap({ $0 })
@@ -151,7 +151,11 @@ func findDependencies(packageURL: PackageURL,
         do {
             let client = HTTPClient(eventLoopGroupProvider: .createNew)
             defer { try? client.syncShutdown() }
-            return try findDependencies(client: client, url: packageURL).wait()
+            let redirectClient = RedirectFollower.Client()
+            defer { try? redirectClient.syncShutdown() }
+            return try findDependencies(client: client,
+                                        redirectClient: redirectClient,
+                                        url: packageURL).wait()
         } catch AppError.rateLimited(until: let reset) where waitIfRateLimited {
             print("RATE LIMITED")
             print("rate limit will reset at \(reset)")
@@ -177,7 +181,9 @@ func findDependencies(packageURL: PackageURL,
 }
 
 
-func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFuture<[PackageURL]> {
+func findDependencies(client: HTTPClient,
+                      redirectClient: RedirectFollower.Client,
+                      url: PackageURL) throws -> EventLoopFuture<[PackageURL]> {
     let el = client.eventLoopGroup.next()
     print("Dependencies for \(url.absoluteString) ...")
     return Package.getManifestURL(client: client, packageURL: url)
@@ -198,7 +204,7 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
                     return el.makeFailedFuture(error)
             }
         }
-        .flatMap { resolvePackageRedirects(eventLoop: el, urls: $0) }
+        .flatMap { resolvePackageRedirects(client: redirectClient, urls: $0) }
         .flatMap { dropForks(client: client, urls: $0) }
         .flatMap { dropNoProducts(client: client, packageURLs: $0) }
         .map { $0.map { $0.appendingGitExtension() } }

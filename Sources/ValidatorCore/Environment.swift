@@ -24,7 +24,7 @@ struct Environment {
                           _ owner: String,
                           _ repository: String) -> EventLoopFuture<Github.Repository>
     var githubToken: () -> String?
-    var resolvePackageRedirects: (EventLoop, PackageURL) -> EventLoopFuture<_Redirect>
+    var resolvePackageRedirects: (RedirectFollower.Client, PackageURL) -> EventLoopFuture<Redirect>
     var shell: Shell
 }
 
@@ -38,8 +38,8 @@ extension Environment {
                                    owner: owner,
                                    repository: repository) },
         githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
-        resolvePackageRedirects: { eventLoop, url in
-            resolveRedirects(eventLoop: eventLoop, for: url)
+        resolvePackageRedirects: { client, url in
+            RedirectFollower.resolvePackageRedirects(client: client, url: url)
         },
         shell: .live
     )
@@ -51,8 +51,8 @@ extension Environment {
             client.eventLoopGroup.next().makeSucceededFuture(
                 Github.Repository(default_branch: "main", fork: false)) },
         githubToken: { nil },
-        resolvePackageRedirects: { eventLoop, url in
-            eventLoop.makeSucceededFuture(.initial(url))
+        resolvePackageRedirects: { client, url in
+            client.eventLoop.makeSucceededFuture(.initial(url.absoluteString))
         },
         shell: .mock
     )

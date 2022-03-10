@@ -224,28 +224,14 @@ final class ValidatorTests: XCTestCase {
         }
     }
 
-    func test_RedirectFollower() throws {
-        let pkgURL = PackageURL(argument: "https://github.com/finestructure/Arena.git")!
-        let exp = expectation(description: "expectation")
-
-        _ = _RedirectFollower(initialURL: pkgURL) { redirect in
-            exp.fulfill()
-            DispatchQueue.main.async {
-                XCTAssertEqual(redirect, .initial(pkgURL))
-            }
-        }
-
-        wait(for: [exp], timeout: 5)
-    }
-
-    func test_RedirectFollower_2() throws {
-        let client = RedirectFollower.Client()
-        defer { try? client.syncShutdown() }
-        let r = try RedirectFollower
-            .resolve(client: client,
-                     url: "https://github.com/finestructure/Arena.git").wait()
-        XCTAssertEqual(r, .redirected(to: "https://github.com/finestructure/Arena"))
-    }
+//    func test_RedirectFollower_2() throws {
+//        let client = RedirectFollower.Client()
+//        defer { try? client.syncShutdown() }
+//        let r = try RedirectFollower
+//            .resolve(client: client,
+//                     url: "https://github.com/finestructure/Arena.git").wait()
+//        XCTAssertEqual(r, .redirected(to: "https://github.com/finestructure/Arena"))
+//    }
 }
 
 
