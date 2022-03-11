@@ -89,8 +89,7 @@ final class ValidatorTests: XCTestCase {
                 .init(name: "prod")
             ],
             dependencies: [
-                .init(name: "a",
-                      url: PackageURL(argument: "https://github.com/dep/A")!)
+                .init(location: PackageURL(argument: "https://github.com/dep/A")!)
             ]) }
 
         // MUT
@@ -200,43 +199,6 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(pkg.name, "validator")
     }
 
-    func test_issue_1461_DecodingError() throws {
-        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1461
-        // setup
-        let data = try fixtureData(for: "Issue1461.json")
-
-        // MUT
-        let pkg = try JSONDecoder().decode(Package.self, from: data)
-
-        // validate
-        XCTAssertEqual(pkg.name, "Bow OpenAPI")
-    }
-
-    func test_package_describe_backwards_compatibility() throws {
-        // Test decoding the output of package describe when run on packages
-        // with old tools versions.
-        for toolsVersion in ["4.0", "4.2", "5.0", "5.1", "5.2", "5.3", "5.4", "5.5"] {
-            let pkg = try JSONDecoder().decode(
-                Package.self,
-                from: try fixtureData(for: "PackageDescribe-\(toolsVersion).json")
-            )
-            XCTAssertEqual(pkg.name, "Alamofire", "failed for \(toolsVersion)")
-        }
-    }
-
-    func test_RedirectFollower() throws {
-        let pkgURL = PackageURL(argument: "https://github.com/finestructure/Arena.git")!
-        let exp = expectation(description: "expectation")
-
-        _ = RedirectFollower(initialURL: pkgURL) { redirect in
-            exp.fulfill()
-            DispatchQueue.main.async {
-                XCTAssertEqual(redirect, .initial(pkgURL))
-            }
-        }
-
-        wait(for: [exp], timeout: 5)
-    }
 }
 
 
@@ -244,7 +206,7 @@ extension Package {
     static func mock(dependencyURLs: [PackageURL]) -> Self {
         .init(name: "",
               products: [.mock],
-              dependencies: dependencyURLs.map { .init(name: "", url: $0) } )
+              dependencies: dependencyURLs.map { .init(location: $0) } )
     }
 }
 
@@ -265,5 +227,14 @@ private extension Array where Element == String {
 private extension Package.ManifestURL {
     init(_ urlString: String) {
         self.init(rawValue: URL(string: urlString)!)
+    }
+}
+
+
+private extension Package.Dependency {
+    init(location: PackageURL) {
+        self.init(scm: [
+            .init(location: location)
+        ])
     }
 }

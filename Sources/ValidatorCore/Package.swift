@@ -29,8 +29,11 @@ struct Package: Codable {
     }
 
     struct Dependency: Codable, Hashable {
-        let name: String?
-        let url: PackageURL
+        var scm: [SCM]
+
+        struct SCM: Codable, Hashable {
+            let location: PackageURL
+        }
     }
 }
 
@@ -50,7 +53,7 @@ extension Package {
                 throw AppError.dumpPackageError("failed to save manifest \(manifestURL.rawValue.absoluteString) to temp directory \(fileURL.absoluteString)")
             }
             do {
-                guard let pkgJSON = try Current.shell.run(command: .packageDescribe, at: tempDir)
+                guard let pkgJSON = try Current.shell.run(command: .packageDump, at: tempDir)
                         .data(using: .utf8) else {
                     throw AppError.dumpPackageError("package dump did not return data")
                 }
