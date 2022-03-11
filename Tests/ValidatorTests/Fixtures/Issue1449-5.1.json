@@ -1,0 +1,73 @@
+{
+  "cLanguageStandard" : null,
+  "cxxLanguageStandard" : null,
+  "dependencies" : [
+
+  ],
+  "name" : "ValidatorTest",
+  "packageKind" : "root",
+  "pkgConfig" : null,
+  "platforms" : [
+
+  ],
+  "products" : [
+    {
+      "name" : "ValidatorTest",
+      "settings" : [
+
+      ],
+      "targets" : [
+        "ValidatorTest"
+      ],
+      "type" : {
+        "library" : [
+          "automatic"
+        ]
+      }
+    }
+  ],
+  "providers" : null,
+  "swiftLanguageVersions" : null,
+  "targets" : [
+    {
+      "dependencies" : [
+
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "ValidatorTest",
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "regular"
+    },
+    {
+      "dependencies" : [
+        {
+          "byName" : [
+            "ValidatorTest",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "ValidatorTestTests",
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "test"
+    }
+  ],
+  "toolsVersion" : {
+    "_version" : "5.1.0"
+  }
+}

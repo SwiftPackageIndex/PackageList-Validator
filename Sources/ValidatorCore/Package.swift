@@ -20,17 +20,25 @@ import Tagged
 
 
 struct Package: Codable {
-    let name: String
-    let products: [Product]
-    let dependencies: [Dependency]
+    var name: String
+    var products: [Product]
+    var dependencies: [Dependency]
+    var toolsVersion: ToolsVersion?
 
     struct Product: Codable {
-        let name: String
+        var name: String
     }
 
     struct Dependency: Codable, Hashable {
-        let name: String?
-        let url: PackageURL
+        var scm: [SCM]
+
+        struct SCM: Codable, Hashable {
+            var location: PackageURL
+        }
+    }
+
+    struct ToolsVersion: Codable {
+        var _version: String
     }
 }
 
@@ -50,7 +58,7 @@ extension Package {
                 throw AppError.dumpPackageError("failed to save manifest \(manifestURL.rawValue.absoluteString) to temp directory \(fileURL.absoluteString)")
             }
             do {
-                guard let pkgJSON = try Current.shell.run(command: .packageDescribe, at: tempDir)
+                guard let pkgJSON = try Current.shell.run(command: .packageDump, at: tempDir)
                         .data(using: .utf8) else {
                     throw AppError.dumpPackageError("package dump did not return data")
                 }

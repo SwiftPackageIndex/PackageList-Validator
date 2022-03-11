@@ -16,5 +16,5 @@ import ShellOut
 
 
 extension ShellOutCommand {
-    static let packageDescribe = ShellOutCommand(string: "/usr/bin/xcrun swift package describe --type json")
+    static let packageDump = ShellOutCommand(string: "/usr/bin/xcrun swift package dump-package")
 }
