@@ -189,14 +189,21 @@ final class ValidatorTests: XCTestCase {
 
     func test_issue_1449_DecodingError() throws {
         // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1449
-        // setup
-        let data = try fixtureData(for: "Issue1449.json")
+        // also
+        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1461
 
-        // MUT
-        let pkg = try JSONDecoder().decode(Package.self, from: data)
+        for toolsVersion in ["5.1", "5.2", "5.3", "5.4", "5.5"] {
+            // setup
+            let data = try fixtureData(for: "Issue1449-\(toolsVersion).json")
 
-        // validate
-        XCTAssertEqual(pkg.name, "validator")
+            // MUT
+            let pkg = try JSONDecoder().decode(Package.self, from: data)
+
+            // validate
+            XCTAssertEqual(pkg.name, "ValidatorTest", "failed for: \(toolsVersion)")
+            XCTAssertEqual(pkg.toolsVersion?._version, "\(toolsVersion).0",
+                           "failed for: \(toolsVersion)")
+        }
     }
 
 }

@@ -20,20 +20,25 @@ import Tagged
 
 
 struct Package: Codable {
-    let name: String
-    let products: [Product]
-    let dependencies: [Dependency]
+    var name: String
+    var products: [Product]
+    var dependencies: [Dependency]
+    var toolsVersion: ToolsVersion?
 
     struct Product: Codable {
-        let name: String
+        var name: String
     }
 
     struct Dependency: Codable, Hashable {
         var scm: [SCM]
 
         struct SCM: Codable, Hashable {
-            let location: PackageURL
+            var location: PackageURL
         }
+    }
+
+    struct ToolsVersion: Codable {
+        var _version: String
     }
 }
 
