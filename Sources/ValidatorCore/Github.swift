@@ -39,27 +39,30 @@ extension Github {
 
     enum RateLimitStatus {
         case limited(until: Date)
-        case ok
+        case ok(remaining: Int, reset: Date)
         case unknown
     }
 
 
     static func rateLimitStatus(_ response: HTTPClient.Response) -> RateLimitStatus {
-        if
-            response.status == .forbidden,
-            let remaining = response.headers.first(name: "X-RateLimit-Remaining")
+        guard let remaining = response.headers.first(name: "X-RateLimit-Remaining")
                 .flatMap(Int.init),
-            let reset = response.headers.first(name: "X-RateLimit-Reset")
+              let reset = response.headers.first(name: "X-RateLimit-Reset")
                 .flatMap(TimeInterval.init)
                 .flatMap(Date.init(timeIntervalSince1970:))
-             {
+        else {
+            return .unknown
+        }
+
+        if response.status == .forbidden {
             if remaining == 0 {
                 return .limited(until: reset)
             } else {
                 return .unknown
             }
         }
-        return .ok
+
+        return .ok(remaining: remaining, reset: reset)
     }
 
 }
@@ -68,6 +71,32 @@ extension Github {
 // MARK: - fetching repositories
 
 extension Github {
+
+    struct RateLimit: Decodable {
+        var limit: Int
+        var used: Int
+        var remaining: Int
+        var reset: Int
+
+        var resetDate: Date {
+            Date(timeIntervalSince1970: TimeInterval(reset))
+        }
+
+        var secondsUntilReset: TimeInterval {
+            resetDate.timeIntervalSinceNow
+        }
+    }
+
+
+    static func getRateLimit(client: HTTPClient, token: String) -> EventLoopFuture<RateLimit> {
+        struct Response: Decodable {
+            var rate: RateLimit
+        }
+        let url = URL(string: "https://api.github.com/rate_limit")!
+        return fetch(Response.self, client: client, url: url)
+            .map(\.rate)
+    }
+
 
     static var repositoryCache = Cache<Repository>()
 

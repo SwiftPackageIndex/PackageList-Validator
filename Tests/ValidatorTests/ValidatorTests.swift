@@ -223,6 +223,20 @@ final class ValidatorTests: XCTestCase {
             XCTAssertEqual(pkg.name, "Alamofire", "failed for \(toolsVersion)")
         }
     }
+
+    func test_RedirectFollower() throws {
+        let pkgURL = PackageURL(argument: "https://github.com/finestructure/Arena.git")!
+        let exp = expectation(description: "expectation")
+
+        _ = RedirectFollower(initialURL: pkgURL) { redirect in
+            exp.fulfill()
+            DispatchQueue.main.async {
+                XCTAssertEqual(redirect, .initial(pkgURL))
+            }
+        }
+
+        wait(for: [exp], timeout: 5)
+    }
 }
 
 

@@ -15,6 +15,7 @@
 import ArgumentParser
 import Foundation
 import NIO
+import AsyncHTTPClient
 
 
 extension Validator {
@@ -56,47 +57,76 @@ extension Validator {
             }
         }
 
+        static func process(redirect: Redirect,
+                            verbose: Bool,
+                            index: Int,
+                            packageURL: PackageURL,
+                            normalized: inout Set<String>) throws -> PackageURL? {
+            if verbose || index % 50 == 0 {
+                print("package \(index) ...")
+                fflush(stdout)
+            }
+            switch redirect {
+                case .initial:
+                    if verbose {
+                        print("        \(packageURL.absoluteString)")
+                    }
+                    return packageURL
+                case let .error(error):
+                    print("ERROR: \(error)")
+                    return nil
+                case .notFound:
+                    print("package \(index) ...")
+                    print("NOT FOUND:  \(packageURL.absoluteString)")
+                    return nil
+                case .rateLimited:
+                    fatalError("rate limited - should have been retried at a lower level")
+                case .redirected(let url):
+                    guard !normalized.contains(url.normalized()) else {
+                        print("DELETE  \(packageURL) -> \(url) (exists)")
+                        return nil
+                    }
+                    print("ADD     \(packageURL) -> \(url) (new)")
+                    _ = DispatchQueue.main.sync {
+                        normalized.insert(url.normalized())
+                    }
+                    return url
+            }
+        }
+
         mutating func run() throws {
+            let verbose = verbose
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
+            let httpClient = HTTPClient(eventLoopGroupProvider: .createNew)
+            defer { try? httpClient.syncShutdown() }
 
             print("Checking for redirects (\(prefix) packages) ...")
 
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-            var normalized = inputURLs.map { $0.normalized() }
+            var normalized = Set(inputURLs.map { $0.normalized() })
             let updated = try inputURLs
                 .prefix(prefix)
                 .enumerated()
-                .compactMap { (index, packageURL) -> PackageURL? in
-                    if verbose || index % 50 == 0 {
-                        print("package \(index) ...")
-                        fflush(stdout)
-                    }
-                    switch try resolvePackageRedirects(eventLoop: elg.next(),
-                                                       for: packageURL).wait() {
-                        case .initial:
-                            if verbose {
-                                print("        \(packageURL.absoluteString)")
+                .compactMap { (index, packageURL) in
+                    try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL)
+                        .flatMapThrowing { redirect -> PackageURL? in
+                            if index % 100 == 0, let token = Current.githubToken() {
+                                let rateLimit = try Github.getRateLimit(client: httpClient,
+                                                                        token: token).wait()
+                                if rateLimit.remaining < 200 {
+                                    print("Rate limit remaining: \(rateLimit.remaining)")
+                                    print("Sleeping until reset at \(rateLimit.resetDate) ...")
+                                    sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
+                                }
                             }
-                            return packageURL
-                        case let .error(error):
-                            print("ERROR: \(error)")
-                            throw error
-                        case .notFound:
-                            print("package \(index) ...")
-                            print("NOT FOUND:  \(packageURL.absoluteString)")
-                            return nil
-                        case .rateLimited:
-                            fatalError("rate limited - should have been retried at a lower level")
-                        case .redirected(let url):
-                            guard !normalized.contains(url.normalized()) else {
-                                print("DELETE  \(packageURL) -> \(url) (exists)")
-                                return nil
-                            }
-                            print("ADD     \(packageURL) -> \(url) (new)")
-                            normalized.append(url.normalized())
-                            return url
-                    }
+
+                            return try Self.process(redirect: redirect,
+                                                    verbose: verbose,
+                                                    index: index,
+                                                    packageURL: packageURL,
+                                                    normalized: &normalized)
+                        }.wait()
                 }
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
 

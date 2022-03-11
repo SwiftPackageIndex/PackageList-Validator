@@ -17,7 +17,7 @@
 
 VERSION := $(shell git describe --always --tags --dirty)
 VERSION_FILE = Sources/ValidatorCore/Version.swift
-XCODE="/Applications/Xcode_13.1.app"
+XCODE="/Applications/Xcode_13.2.1.app"
 
 commit: install
 	git commit -a -m "make commit: $(VERSION)"
