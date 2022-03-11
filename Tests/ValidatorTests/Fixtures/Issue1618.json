@@ -1,0 +1,266 @@
+{
+  "cLanguageStandard" : null,
+  "cxxLanguageStandard" : null,
+  "dependencies" : [
+    {
+      "scm" : [
+        {
+          "identity" : "bow",
+          "location" : "https://github.com/bow-swift/bow.git",
+          "name" : "Bow",
+          "productFilter" : null,
+          "requirement" : {
+            "exact" : [
+              "0.8.0"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "scm" : [
+        {
+          "identity" : "swift-argument-parser",
+          "location" : "https://github.com/apple/swift-argument-parser.git",
+          "productFilter" : null,
+          "requirement" : {
+            "exact" : [
+              "0.2.1"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "scm" : [
+        {
+          "identity" : "swiftline",
+          "location" : "https://github.com/bow-swift/Swiftline.git",
+          "productFilter" : null,
+          "requirement" : {
+            "exact" : [
+              "0.5.6"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "scm" : [
+        {
+          "identity" : "swift-snapshot-testing",
+          "location" : "https://github.com/pointfreeco/swift-snapshot-testing.git",
+          "name" : "SnapshotTesting",
+          "productFilter" : null,
+          "requirement" : {
+            "exact" : [
+              "1.7.2"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "scm" : [
+        {
+          "identity" : "swiftcheck",
+          "location" : "https://github.com/bow-swift/SwiftCheck.git",
+          "productFilter" : null,
+          "requirement" : {
+            "exact" : [
+              "0.12.1"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "local" : [
+        {
+          "identity" : "fixturesapi",
+          "path" : "/private/var/folders/nk/tlpts6bs799038htr6rx1xnc0000gn/T/FDB7FBC5-8937-44BF-BF5F-75B892CBC7A0/Tests/Fixtures/FixturesAPI",
+          "productFilter" : null
+        }
+      ]
+    }
+  ],
+  "name" : "Bow OpenAPI",
+  "packageKind" : "root",
+  "pkgConfig" : null,
+  "platforms" : [
+    {
+      "options" : [
+
+      ],
+      "platformName" : "macos",
+      "version" : "10.14"
+    }
+  ],
+  "products" : [
+    {
+      "name" : "bow-openapi",
+      "settings" : [
+
+      ],
+      "targets" : [
+        "CLI"
+      ],
+      "type" : {
+        "executable" : null
+      }
+    }
+  ],
+  "providers" : null,
+  "swiftLanguageVersions" : null,
+  "targets" : [
+    {
+      "dependencies" : [
+        {
+          "product" : [
+            "Bow",
+            "Bow",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "BowEffects",
+            "Bow",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "BowOptics",
+            "Bow",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "Swiftline",
+            "Swiftline",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "OpenApiGenerator",
+      "path" : "OpenApiGenerator",
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "regular"
+    },
+    {
+      "dependencies" : [
+        {
+          "target" : [
+            "OpenApiGenerator",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "ArgumentParser",
+            "swift-argument-parser",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "CLI",
+      "path" : "BowOpenAPI",
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "regular"
+    },
+    {
+      "dependencies" : [
+        {
+          "target" : [
+            "OpenApiGenerator",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "Bow",
+            "Bow",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "BowEffects",
+            "Bow",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "BowOptics",
+            "Bow",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "SnapshotTesting",
+            "SnapshotTesting",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "SwiftCheck",
+            "SwiftCheck",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "FixturesAPI",
+            "FixturesAPI",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "FixturesAPITest",
+            "FixturesAPI",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+        "__Snapshots__",
+        "Fixtures",
+        "Support Files"
+      ],
+      "name" : "OpenApiGeneratorTests",
+      "path" : "Tests",
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "test"
+    }
+  ],
+  "toolsVersion" : {
+    "_version" : "5.2.0"
+  }
+}

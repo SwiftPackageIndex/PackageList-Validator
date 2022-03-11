@@ -30,7 +30,7 @@ struct Package: Codable {
     }
 
     struct Dependency: Codable, Hashable {
-        var scm: [SCM]
+        var scm: [SCM]?
 
         struct SCM: Codable, Hashable {
             var location: PackageURL
