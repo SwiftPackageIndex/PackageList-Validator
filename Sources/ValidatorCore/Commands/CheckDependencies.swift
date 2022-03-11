@@ -184,7 +184,7 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
         .flatMapThrowing {
             try Current.decodeManifest($0)
                 .dependencies
-                .compactMap { $0.scm.first }
+                .compactMap { $0.scm?.first }
                 .map(\.location)
                 .filter { $0.scheme == "https" }
                 .filter { $0.host?.lowercased() == "github.com" }
