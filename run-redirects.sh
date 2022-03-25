@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#validator="xcrun swift run validator"
 validator="./validator"
 
+# log the first 10 packages so we can compare the chunking
+echo "Head of packages.json:"
+curl -s https://raw.githubusercontent.com/SwiftPackageIndex/PackageList/main/packages.json | head -11
+echo "..."
+echo
 
-#curl -O "https://raw.githubusercontent.com/SwiftPackageIndex/PackageList/main/packages.json"
-
-$validator check-redirects --use-package-list -o packages.json -l 10
+$validator check-redirects --use-package-list -o packages.json -l 10 --chunk 1 --number-of-chunks 3
 cat packages.json
