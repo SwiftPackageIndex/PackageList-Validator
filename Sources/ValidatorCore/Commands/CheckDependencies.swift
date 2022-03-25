@@ -40,6 +40,12 @@ extension Validator {
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
 
+        @Option(name: .long, help: "index of chunk to process (0..<number-of-chunks)")
+        var chunk: Int?
+
+        @Option(name: .long, help: "number of chunks to split the package list into")
+        var numberOfChunks: Int?
+
         var inputSource: InputSource {
             switch (input, usePackageList, packageUrls.count) {
                 case (.some(let fname), false, 0):
@@ -70,6 +76,8 @@ extension Validator {
 
             let updated = try expandDependencies(inputURLs: inputURLs,
                                                  limit: limit,
+                                                 chunk: chunk,
+                                                 numberOfChunks: numberOfChunks,
                                                  retries: retries)
 
             if let path = output {
@@ -85,9 +93,12 @@ extension Validator {
 /// - Returns: complete list of package URLs, including the input set
 func expandDependencies(inputURLs: [PackageURL],
                         limit: Int? = nil,
+                        chunk: Int? = nil,
+                        numberOfChunks: Int? = nil,
                         retries: Int) throws -> [PackageURL] {
     try inputURLs
         .prefix(limit ?? inputURLs.count)
+        .chunk(index: chunk, of: numberOfChunks)
         .flatMap { packageURL -> [PackageURL] in
             do {
                 return try findDependencies(packageURL: packageURL,

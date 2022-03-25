@@ -219,6 +219,31 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(pkg.name, "Bow OpenAPI")
     }
 
+    func test_ArraySlice_chunk() throws {
+        do {
+            XCTAssertEqual(Array(0..<8)[...].chunk(index: 0, of: 3), [0, 1, 2])
+            XCTAssertEqual(Array(0..<8)[...].chunk(index: 1, of: 3), [3, 4, 5])
+            XCTAssertEqual(Array(0..<8)[...].chunk(index: 2, of: 3), [6, 7])
+        }
+        do {
+            XCTAssertEqual(Array(1..<8)[...].chunk(index: 0, of: 3), [1, 2, 3])
+            XCTAssertEqual(Array(1..<8)[...].chunk(index: 1, of: 3), [4, 5, 6])
+            XCTAssertEqual(Array(1..<8)[...].chunk(index: 2, of: 3), [7])
+        }
+        do {
+            XCTAssertEqual(Array(0..<2)[...].chunk(index: 0, of: 0), [0, 1])
+        }
+        do {
+            XCTAssertEqual(Array(0..<2)[...].chunk(index: nil, of: 0), [0, 1])
+        }
+        do {
+            XCTAssertEqual(Array(0..<2)[...].chunk(index: 0, of: nil), [0, 1])
+        }
+        do {
+            XCTAssertEqual(Array(0..<2)[...].chunk(index: nil, of: nil), [0, 1])
+        }
+    }
+
 }
 
 
