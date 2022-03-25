@@ -73,6 +73,9 @@ extension Validator {
             let inputURLs = try inputSource.packageURLs()
 
             print("Checking dependencies (\(limit ?? inputURLs.count) packages) ...")
+            if let chunk = chunk, let numberOfChunks = numberOfChunks {
+                print("Chunk \(chunk) of \(numberOfChunks)")
+            }
 
             let updated = try expandDependencies(inputURLs: inputURLs,
                                                  limit: limit,
