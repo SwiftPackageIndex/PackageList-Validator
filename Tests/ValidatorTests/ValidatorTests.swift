@@ -244,6 +244,12 @@ final class ValidatorTests: XCTestCase {
         }
     }
 
+
+    func test_Merge_sorting() throws {
+        // Ensure results after merging are sorted
+        XCTAssertEqual(MergeLists.merge(["b", "a"], ["c", "A"]), ["A", "a", "b", "c"])
+    }
+
 }
 
 
