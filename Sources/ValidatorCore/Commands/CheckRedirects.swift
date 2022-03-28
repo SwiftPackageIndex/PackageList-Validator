@@ -38,12 +38,6 @@ extension Validator {
         @Flag(name: .long, help: "enable detailed logging")
         var verbose = false
 
-        @Option(name: .long, help: "index of chunk to process (0..<number-of-chunks)")
-        var chunk: Int?
-
-        @Option(name: .long, help: "number of chunks to split the package list into")
-        var numberOfChunks: Int?
-
         var inputSource: InputSource {
             switch (input, usePackageList, packageUrls.count) {
                 case (.some(let fname), false, 0):
@@ -113,7 +107,6 @@ extension Validator {
             var normalized = Set(inputURLs.map { $0.normalized() })
             let updated = try inputURLs
                 .prefix(prefix)
-                .chunk(index: chunk, of: numberOfChunks)
                 .enumerated()
                 .compactMap { (index, packageURL) in
                     try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL)

@@ -19,6 +19,9 @@ import PackageDescription
 let package = Package(
     name: "validator",
     platforms: [.macOS(.v10_15)],
+    products: [
+      .executable(name: "validator", targets: ["validator"])  
+    ],
     dependencies: [
         .package(name: "async-http-client",
                  url: "https://github.com/swift-server/async-http-client.git", from: "1.2.0"),
