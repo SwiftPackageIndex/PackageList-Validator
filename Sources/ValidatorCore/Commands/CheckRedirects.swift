@@ -108,25 +108,26 @@ extension Validator {
             let updated = try inputURLs
                 .prefix(prefix)
                 .enumerated()
-                .compactMap { (index, packageURL) in
-                    try resolvePackageRedirects(eventLoop: elg.next(), for: packageURL)
-                        .flatMapThrowing { redirect -> PackageURL? in
-                            if index % 100 == 0, let token = Current.githubToken() {
-                                let rateLimit = try Github.getRateLimit(client: httpClient,
-                                                                        token: token).wait()
-                                if rateLimit.remaining < 200 {
-                                    print("Rate limit remaining: \(rateLimit.remaining)")
-                                    print("Sleeping until reset at \(rateLimit.resetDate) ...")
-                                    sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
-                                }
-                            }
+                .compactMap { (index, packageURL) -> PackageURL? in
+                    let redirect = try resolvePackageRedirects(eventLoop: elg.next(),
+                                                               for: packageURL)
+                        .wait()
 
-                            return try Self.process(redirect: redirect,
-                                                    verbose: verbose,
-                                                    index: index,
-                                                    packageURL: packageURL,
-                                                    normalized: &normalized)
-                        }.wait()
+                    if index % 100 == 0, let token = Current.githubToken() {
+                        let rateLimit = try Github.getRateLimit(client: httpClient,
+                                                                token: token).wait()
+                        if rateLimit.remaining < 200 {
+                            print("Rate limit remaining: \(rateLimit.remaining)")
+                            print("Sleeping until reset at \(rateLimit.resetDate) ...")
+                            sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
+                        }
+                    }
+
+                    return try Self.process(redirect: redirect,
+                                            verbose: verbose,
+                                            index: index,
+                                            packageURL: packageURL,
+                                            normalized: &normalized)
                 }
                 .sorted(by: { $0.lowercased() < $1.lowercased() })
 

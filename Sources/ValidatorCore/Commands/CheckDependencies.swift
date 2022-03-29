@@ -15,9 +15,12 @@
 import ArgumentParser
 import AsyncHTTPClient
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import NIO
+import NIOFoundationCompat
 import NIOHTTP1
-import Darwin.C
 
 
 extension Validator {
