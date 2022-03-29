@@ -25,7 +25,7 @@ extension Validator {
 
         @Option(name: .shortAndLong, help: "limit number of urls to check")
         var limit: Int?
-        
+
         @Option(name: .long, help: "start processing URLs from <offset>")
         var offset: Int = 0
 
@@ -106,14 +106,14 @@ extension Validator {
 
             print("Checking for redirects (\(prefix) packages) ...")
 
-            let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
             var normalized = Set(inputURLs.map { $0.normalized() })
             let updated = try inputURLs[offset...]
                 .prefix(prefix)
                 .enumerated()
                 .compactMap { (index, packageURL) -> PackageURL? in
                     let index = index + offset
-                    let redirect = try resolvePackageRedirects(eventLoop: elg.next(),
+                    let redirect = try resolvePackageRedirects(eventLoop: eventLoop,
                                                                for: packageURL)
                         .wait()
 
