@@ -179,9 +179,8 @@ func findDependencies(packageURL: PackageURL,
             print("now: \(Date())")
             throw AppError.rateLimited(until: reset)
         } catch let error as NSError {
-            if error.code == 256
-                && error.localizedDescription == "The file “Package.swift” couldn’t be opened." {
-                print("Warning: invalid package: \(packageURL): \(error.localizedDescription)")
+            if error.code == 256 {
+                print("Warning: invalid package: \(packageURL): The file “Package.swift” couldn’t be opened.")
                 throw AppError.invalidPackage(url: packageURL)
             }
             print("ERROR: \(error)")
