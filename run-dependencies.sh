@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-validator="./validator"
+validator="swift run validator"
 
 # log the first 10 packages so we can compare the chunking
 echo "Head of packages.json:"

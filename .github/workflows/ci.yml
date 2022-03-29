@@ -49,7 +49,6 @@ jobs:
       - name: Build validator
         run: |
           swift build
-          ln -s $(swift build --show-bin-path)/validator .
 
       - name: Check redirects
         run: ./run-redirects.sh

@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#validator="xcrun swift run validator"
-validator="./validator"
+validator="swift run validator"
 
 
 #curl -O "https://raw.githubusercontent.com/SwiftPackageIndex/PackageList/main/packages.json"
