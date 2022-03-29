@@ -38,6 +38,9 @@ extension Validator {
         @Flag(name: .long, help: "enable detailed logging")
         var verbose = false
 
+        @Option(name: .long, help: "start processing URLs from <offset>")
+        var offset: Int = 0
+
         var inputSource: InputSource {
             switch (input, usePackageList, packageUrls.count) {
                 case (.some(let fname), false, 0):
@@ -101,14 +104,17 @@ extension Validator {
             let httpClient = HTTPClient(eventLoopGroupProvider: .createNew)
             defer { try? httpClient.syncShutdown() }
 
+            let offset = min(offset, inputURLs.count - 1)
+
             print("Checking for redirects (\(prefix) packages) ...")
 
             let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
             var normalized = Set(inputURLs.map { $0.normalized() })
-            let updated = try inputURLs
+            let updated = try inputURLs[offset...]
                 .prefix(prefix)
                 .enumerated()
                 .compactMap { (index, packageURL) -> PackageURL? in
+                    let index = index + offset
                     let redirect = try resolvePackageRedirects(eventLoop: elg.next(),
                                                                for: packageURL)
                         .wait()
