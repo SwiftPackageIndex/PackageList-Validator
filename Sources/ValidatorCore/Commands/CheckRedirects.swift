@@ -20,17 +20,17 @@ import AsyncHTTPClient
 
 extension Validator {
     struct CheckRedirects: ParsableCommand {
-        @Option(name: .shortAndLong, help: "limit number of urls to check")
-        var limit: Int?
-
         @Option(name: .shortAndLong, help: "read input from file")
         var input: String?
 
+        @Option(name: .shortAndLong, help: "limit number of urls to check")
+        var limit: Int?
+        
+        @Option(name: .long, help: "start processing URLs from <offset>")
+        var offset: Int = 0
+
         @Option(name: .shortAndLong, help: "save changes to output file")
         var output: String?
-
-        @Argument(help: "Package urls to check")
-        var packageUrls: [PackageURL] = []
 
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
@@ -38,8 +38,8 @@ extension Validator {
         @Flag(name: .long, help: "enable detailed logging")
         var verbose = false
 
-        @Option(name: .long, help: "start processing URLs from <offset>")
-        var offset: Int = 0
+        @Argument(help: "Package urls to check")
+        var packageUrls: [PackageURL] = []
 
         var inputSource: InputSource {
             switch (input, usePackageList, packageUrls.count) {
