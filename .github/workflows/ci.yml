@@ -35,9 +35,16 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Check redirects
-      run: ./run-redirects.sh
-    - name: Check dependencies
-      run: ./run-dependencies.sh
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build validator
+        run: |
+          swift build
+          ln -s $(swift build --show-bin-path)/validator .
+
+      - name: Check redirects
+        run: ./run-redirects.sh
+
+      - name: Check dependencies
+        run: ./run-dependencies.sh
