@@ -20,23 +20,26 @@ import AsyncHTTPClient
 
 extension Validator {
     struct CheckRedirects: ParsableCommand {
-        @Option(name: .shortAndLong, help: "limit number of urls to check")
-        var limit: Int?
-
         @Option(name: .shortAndLong, help: "read input from file")
         var input: String?
 
+        @Option(name: .shortAndLong, help: "limit number of urls to check")
+        var limit: Int?
+
+        @Option(name: .long, help: "start processing URLs from <offset>")
+        var offset: Int = 0
+
         @Option(name: .shortAndLong, help: "save changes to output file")
         var output: String?
-
-        @Argument(help: "Package urls to check")
-        var packageUrls: [PackageURL] = []
 
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
 
         @Flag(name: .long, help: "enable detailed logging")
         var verbose = false
+
+        @Argument(help: "Package urls to check")
+        var packageUrls: [PackageURL] = []
 
         var inputSource: InputSource {
             switch (input, usePackageList, packageUrls.count) {
@@ -87,9 +90,7 @@ extension Validator {
                         return nil
                     }
                     print("ADD     \(packageURL) -> \(url) (new)")
-                    _ = DispatchQueue.main.sync {
-                        normalized.insert(url.normalized())
-                    }
+                    normalized.insert(url.normalized())
                     return url
             }
         }
@@ -101,15 +102,18 @@ extension Validator {
             let httpClient = HTTPClient(eventLoopGroupProvider: .createNew)
             defer { try? httpClient.syncShutdown() }
 
+            let offset = min(offset, inputURLs.count - 1)
+
             print("Checking for redirects (\(prefix) packages) ...")
 
-            let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
             var normalized = Set(inputURLs.map { $0.normalized() })
-            let updated = try inputURLs
+            let updated = try inputURLs[offset...]
                 .prefix(prefix)
                 .enumerated()
                 .compactMap { (index, packageURL) -> PackageURL? in
-                    let redirect = try resolvePackageRedirects(eventLoop: elg.next(),
+                    let index = index + offset
+                    let redirect = try resolvePackageRedirects(eventLoop: eventLoop,
                                                                for: packageURL)
                         .wait()
 
