@@ -1,0 +1,11 @@
+{
+    "name": "spi-base",
+    "image": "swift:5.6-focal",
+    "extensions": [
+      "sswg.swift-lang",
+    ],
+    "settings": {
+      "lldb.library": "/usr/lib/liblldb.so"
+    },
+    "forwardPorts": [8080]
+}
