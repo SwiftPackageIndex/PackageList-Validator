@@ -90,9 +90,7 @@ extension Validator {
                         return nil
                     }
                     print("ADD     \(packageURL) -> \(url) (new)")
-                    _ = DispatchQueue.main.sync {
-                        normalized.insert(url.normalized())
-                    }
+                    normalized.insert(url.normalized())
                     return url
             }
         }
