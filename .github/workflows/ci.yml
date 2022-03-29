@@ -51,7 +51,7 @@ jobs:
           swift build
 
       - name: Check redirects
-        run: ./run-redirects.sh
+        run: ./check-redirects.sh
 
       - name: Check dependencies
-        run: ./run-dependencies.sh
+        run: ./check-dependencies.sh
