@@ -33,8 +33,16 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+        swift: ["5.6"]
     runs-on: ${{ matrix.os }}
     steps:
+      - uses: fwal/setup-swift@v1
+        with:
+          swift-version: ${{ matrix.swift }}
+      
+      - name: Get swift version
+        run: swift --version
+
       - name: Checkout
         uses: actions/checkout@v2
 
