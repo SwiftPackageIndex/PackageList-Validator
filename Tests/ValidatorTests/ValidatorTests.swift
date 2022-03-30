@@ -244,6 +244,13 @@ final class ValidatorTests: XCTestCase {
         }
     }
 
+    func test_CaseinsensitiveHash() throws {
+        let a = CaseinsensitiveString(value: "a")
+        let A = CaseinsensitiveString(value: "A")
+        XCTAssertEqual(a, A)
+        XCTAssertEqual(Set([a]).union(Set([A])), Set([a]))
+        XCTAssertEqual(Set([A]).union(Set([a])), Set([A]))
+    }
 
     func test_Merge_sorting() throws {
         // Ensure results after merging are sorted
@@ -251,6 +258,9 @@ final class ValidatorTests: XCTestCase {
         // Ensure sorting ignores case
         XCTAssertEqual(MergeLists.merge(["Ac"], ["ab"]), ["ab", "Ac"])
         XCTAssertEqual(MergeLists.merge(["ac"], ["Ab"]), ["Ab", "ac"])
+        // Ensure results are unique (first occurence wins)
+        XCTAssertEqual(MergeLists.merge(["b", "a"], ["c", "A"]), ["a", "b", "c"])
+        XCTAssertEqual(MergeLists.merge(["b", "A"], ["c", "a"]), ["A", "b", "c"])
     }
 
 }
