@@ -61,6 +61,7 @@ struct MergeLists: ParsableCommand {
 }
 
 
+/// String container that compares, sorts, and hashes as if it was lowercased while preserving its original casing.
 struct CaseinsensitiveString: Hashable, Comparable {
     var value: String
 
