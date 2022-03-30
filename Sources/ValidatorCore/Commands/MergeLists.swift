@@ -51,11 +51,29 @@ struct MergeLists: ParsableCommand {
     }
 
     static func merge(_ packageLists: [[String]]) -> [String] {
-        var packageURLs = Set<String>()
+        var packageURLs = Set<CaseinsensitiveString>()
         for p in packageLists {
-            packageURLs.formUnion(p)
+            packageURLs.formUnion(p.map(CaseinsensitiveString.init(value:)))
         }
-        return packageURLs.sorted()
+        return packageURLs.sorted().map(\.value)
     }
 
+}
+
+
+/// String container that compares, sorts, and hashes as if it was lowercased while preserving its original casing.
+struct CaseinsensitiveString: Hashable, Comparable {
+    var value: String
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.value.lowercased() == rhs.value.lowercased()
+    }
+
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.value.lowercased() < rhs.value.lowercased()
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(value.lowercased())
+    }
 }
