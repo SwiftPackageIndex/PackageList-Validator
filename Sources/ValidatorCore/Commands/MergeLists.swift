@@ -55,7 +55,7 @@ struct MergeLists: ParsableCommand {
         for p in packageLists {
             packageURLs.formUnion(p)
         }
-        return packageURLs.sorted()
+        return packageURLs.sorted { $0.lowercased() < $1.lowercased() }
     }
 
 }

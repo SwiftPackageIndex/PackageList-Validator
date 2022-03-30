@@ -247,7 +247,10 @@ final class ValidatorTests: XCTestCase {
 
     func test_Merge_sorting() throws {
         // Ensure results after merging are sorted
-        XCTAssertEqual(MergeLists.merge(["b", "a"], ["c", "A"]), ["A", "a", "b", "c"])
+        XCTAssertEqual(MergeLists.merge(["b", "a2"], ["c", "A1"]), ["A1", "a2", "b", "c"])
+        // Ensure sorting ignores case
+        XCTAssertEqual(MergeLists.merge(["Ac"], ["ab"]), ["ab", "Ac"])
+        XCTAssertEqual(MergeLists.merge(["ac"], ["Ab"]), ["Ab", "ac"])
     }
 
 }
