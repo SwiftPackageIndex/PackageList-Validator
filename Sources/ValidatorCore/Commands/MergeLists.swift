@@ -26,7 +26,7 @@ struct MergeLists: ParsableCommand {
     func run() throws {
         let packageURLs = try Self.merge(paths: files)
 
-        try output.process(packageURLs: packageURLs.sorted())
+        try output.process(packageURLs: packageURLs)
     }
 
     static func merge(paths: [String]) throws -> [String] {
