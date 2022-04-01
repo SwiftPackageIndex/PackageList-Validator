@@ -110,7 +110,7 @@ func expandDependencies(inputURLs: [PackageURL],
                 return try findDependencies(packageURL: packageURL,
                                             waitIfRateLimited: true,
                                             retries: retries)
-            } catch AppError.invalidPackage {
+            } catch {
                 return []
             }
         }
@@ -183,7 +183,10 @@ func findDependencies(packageURL: PackageURL,
                 print("Warning: invalid package: \(packageURL): The file “Package.swift” couldn’t be opened.")
                 throw AppError.invalidPackage(url: packageURL)
             }
-            print("ERROR: \(error)")
+            print("ERROR: NSError: \(error)")
+            for underlyingError in error.underlyingErrors {
+                print("ERROR: underlyingError: \(underlyingError)")
+            }
             throw error
         } catch {
             print("ERROR: \(error)")
