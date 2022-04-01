@@ -128,7 +128,7 @@ final class ValidatorTests: XCTestCase {
         }
 
         // MUT
-        let urls = try expandDependencies(inputURLs: [A, B], retries: 0)
+        let urls = expandDependencies(inputURLs: [A, B], retries: 0)
 
         // validate
         XCTAssertEqual(urls, [A, B, x, y, z])
@@ -158,7 +158,7 @@ final class ValidatorTests: XCTestCase {
         }
 
         // MUT
-        let urls = try expandDependencies(inputURLs: [A, B], retries: 0)
+        let urls = expandDependencies(inputURLs: [A, B], retries: 0)
 
         // validate
         XCTAssertEqual(urls, [A, B, x_git, Y_git, z_git])
@@ -181,7 +181,7 @@ final class ValidatorTests: XCTestCase {
         }
 
         // MUT
-        let urls = try expandDependencies(inputURLs: [p1, p2], retries: 0)
+        let urls = expandDependencies(inputURLs: [p1, p2], retries: 0)
 
         // validate
         XCTAssertEqual(urls, [p1, p2])

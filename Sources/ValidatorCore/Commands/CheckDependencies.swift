@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Dave Verwer, Sven A. Schmidt, and other contributors.
+// Copyright 2020-2022 Dave Verwer, Sven A. Schmidt, and other contributors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -80,11 +80,11 @@ extension Validator {
                 print("Chunk \(chunk) of \(numberOfChunks)")
             }
 
-            let updated = try expandDependencies(inputURLs: inputURLs,
-                                                 limit: limit,
-                                                 chunk: chunk,
-                                                 numberOfChunks: numberOfChunks,
-                                                 retries: retries)
+            let updated = expandDependencies(inputURLs: inputURLs,
+                                             limit: limit,
+                                             chunk: chunk,
+                                             numberOfChunks: numberOfChunks,
+                                             retries: retries)
 
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)
@@ -101,8 +101,8 @@ func expandDependencies(inputURLs: [PackageURL],
                         limit: Int? = nil,
                         chunk: Int? = nil,
                         numberOfChunks: Int? = nil,
-                        retries: Int) throws -> [PackageURL] {
-    try inputURLs
+                        retries: Int) -> [PackageURL] {
+    inputURLs
         .prefix(limit ?? inputURLs.count)
         .chunk(index: chunk, of: numberOfChunks)
         .flatMap { packageURL -> [PackageURL] in
@@ -184,7 +184,7 @@ func findDependencies(packageURL: PackageURL,
                 throw AppError.invalidPackage(url: packageURL)
             }
             print("ERROR: NSError: \(error)")
-            for underlyingError in error.underlyingErrors {
+            if let underlyingError = error.underlyingError {
                 print("ERROR: underlyingError: \(underlyingError)")
             }
             throw error
