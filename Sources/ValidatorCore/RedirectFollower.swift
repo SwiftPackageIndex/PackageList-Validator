@@ -39,17 +39,18 @@ class RedirectFollower: NSObject, URLSessionTaskDelegate {
                 return
             }
             let response = response as! HTTPURLResponse
-            guard response.statusCode != 404 else {
-                completion(.notFound)
-                return
+            switch response.statusCode {
+                case 401, 403:
+                    completion(.unauthorized)
+                case 404:
+                    completion(.notFound)
+                case 429:
+                    let delay = response.value(forHTTPHeaderField: "Retry-After")
+                        .flatMap(Int.init) ?? 5
+                    completion(.rateLimited(delay: delay))
+                default:
+                    completion(self!.status)
             }
-            guard response.statusCode != 429 else {
-                let delay = response.value(forHTTPHeaderField: "Retry-After").flatMap(Int.init)
-                    ?? 5
-                completion(.rateLimited(delay: delay))
-                return
-            }
-            completion(self!.status)
         }
         self.task?.resume()
     }
@@ -73,12 +74,13 @@ enum Redirect: Equatable {
     case notFound
     case rateLimited(delay: Int)
     case redirected(to: PackageURL)
+    case unauthorized
 
     var url: PackageURL? {
         switch self {
             case .initial(let url):
                 return url
-            case .error, .notFound, .rateLimited:
+            case .error, .notFound, .rateLimited, .unauthorized:
                 return nil
             case .redirected(to: let url):
                 return url
@@ -115,7 +117,7 @@ func resolvePackageRedirects(eventLoop: EventLoop,
         resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
             .flatMap { status -> EventLoopFuture<Redirect> in
                 switch status {
-                    case .initial, .notFound, .error:
+                    case .initial, .notFound, .error, .unauthorized:
                         return eventLoop.makeSucceededFuture(status)
                     case .rateLimited(let delay):
                         guard depth < maxDepth else {

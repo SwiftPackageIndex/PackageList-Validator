@@ -77,7 +77,8 @@ extension Validator {
                     return packageURL
                 case let .error(error):
                     print("ERROR: \(error)")
-                    return nil
+                    // don't skip packages that have unrecognised errors
+                    return packageURL
                 case .notFound:
                     print("package \(index) ...")
                     print("NOT FOUND:  \(packageURL.absoluteString)")
@@ -92,6 +93,10 @@ extension Validator {
                     print("ADD     \(packageURL) -> \(url) (new)")
                     normalized.insert(url.normalized())
                     return url
+                case .unauthorized:
+                    print("package \(index) ...")
+                    print("UNAUTHORIZED:  \(packageURL.absoluteString)")
+                    return nil
             }
         }
 
