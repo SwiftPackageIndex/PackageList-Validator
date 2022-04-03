@@ -81,21 +81,21 @@ extension Validator {
                     return packageURL
                 case .notFound:
                     print("package \(index) ...")
-                    print("NOT FOUND:  \(packageURL.absoluteString)")
+                    print("NOT FOUND: \(packageURL.absoluteString)")
                     return nil
                 case .rateLimited:
                     fatalError("rate limited - should have been retried at a lower level")
                 case .redirected(let url):
                     guard !normalized.contains(url.normalized()) else {
-                        print("DELETE  \(packageURL) -> \(url) (exists)")
+                        print("DELETE \(packageURL) -> \(url) (exists)")
                         return nil
                     }
-                    print("ADD     \(packageURL) -> \(url) (new)")
+                    print("ADD \(packageURL) -> \(url) (new)")
                     normalized.insert(url.normalized())
                     return url
                 case .unauthorized:
                     print("package \(index) ...")
-                    print("UNAUTHORIZED:  \(packageURL.absoluteString)")
+                    print("UNAUTHORIZED: \(packageURL.absoluteString)")
                     return nil
             }
         }
