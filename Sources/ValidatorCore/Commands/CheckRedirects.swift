@@ -76,12 +76,12 @@ extension Validator {
                     }
                     return packageURL
                 case let .error(error):
-                    print("ERROR: \(error)")
+                    print("ERROR: \(error) (ignored, keeping package)")
                     // don't skip packages that have unrecognised errors
                     return packageURL
                 case .notFound:
                     print("package \(index) ...")
-                    print("NOT FOUND: \(packageURL.absoluteString)")
+                    print("NOT FOUND: \(packageURL.absoluteString) (deleting package)")
                     return nil
                 case .rateLimited:
                     fatalError("rate limited - should have been retried at a lower level")
@@ -95,7 +95,7 @@ extension Validator {
                     return url
                 case .unauthorized:
                     print("package \(index) ...")
-                    print("UNAUTHORIZED: \(packageURL.absoluteString)")
+                    print("UNAUTHORIZED: \(packageURL.absoluteString) (deleting package)")
                     return nil
             }
         }
