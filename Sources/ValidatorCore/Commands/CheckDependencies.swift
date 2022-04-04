@@ -212,7 +212,7 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
         .flatMapError { error in
             switch error {
                 case AppError.dumpPackageError, AppError.repositoryNotFound:
-                    print("INFO: Skipping package due to error: \(error)")
+                    print("INFO: Skipping package \(url) due to error: \(error)")
                     return el.makeSucceededFuture([])
                 default:
                     return el.makeFailedFuture(error)
