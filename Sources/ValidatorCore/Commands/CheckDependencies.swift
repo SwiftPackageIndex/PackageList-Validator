@@ -180,7 +180,13 @@ func findDependencies(packageURL: PackageURL,
             throw AppError.rateLimited(until: reset)
         } catch let error as NSError {
             if error.code == 256 {
-                print("Warning: invalid package: \(packageURL): The file “Package.swift” couldn’t be opened.")
+                let knownBadPackages = [
+                    // azure-sdk-for-ios has Package.swift only on tags, not on the default branch
+                    "https://github.com/Azure/azure-sdk-for-ios.git"
+                ]
+                if !knownBadPackages.contains(packageURL.absoluteString) {
+                    print("Warning: invalid package: \(packageURL): The file “Package.swift” couldn’t be opened.")
+                }
                 throw AppError.invalidPackage(url: packageURL)
             }
             print("ERROR: NSError: \(error)")
