@@ -181,10 +181,22 @@ func findDependencies(packageURL: PackageURL,
         } catch let error as NSError {
             if error.code == 256 {
                 let knownBadPackages = [
-                    // azure-sdk-for-ios has Package.swift only on tags, not on the default branch
-                    "https://github.com/Azure/azure-sdk-for-ios.git"
-                ]
-                if !knownBadPackages.contains(packageURL.absoluteString) {
+                    // Has Package.swift only on tags, not on the default branch
+                    "https://github.com/Azure/azure-sdk-for-ios.git",
+                    // Not compatible with Swift 5.6
+                    "https://github.com/cpageler93/quack.git",
+                    // Not compatible with Swift 5.6
+                    "https://github.com/dougzilla32/CancelForPromiseKit.git",
+                    // Package.swift file is not compatible with Swift 5.6.
+                    // It ships with a Package@swift-5.3.swift file that makes it work in our
+                    // build system but we can't use this here.
+                    "https://github.com/mxcl/PromiseKit.git",
+                    // Using 5.3 syntax in a tools-version:5.2 file
+                    "https://github.com/palle-k/DL4S.git",
+                    // Using .iOS(.v13) in a tools-version:5.0 file
+                    "https://github.com/piemonte/Position.git",
+                ].map { $0.lowercased() }
+                if !knownBadPackages.contains(packageURL.absoluteString.lowercased()) {
                     print("Warning: invalid package: \(packageURL): The file “Package.swift” couldn’t be opened.")
                 }
                 throw AppError.invalidPackage(url: packageURL)

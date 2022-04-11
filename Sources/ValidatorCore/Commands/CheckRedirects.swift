@@ -76,7 +76,7 @@ extension Validator {
                     }
                     return packageURL
                 case let .error(error):
-                    print("ERROR: \(error) (ignored, keeping package)")
+                    print("ERROR: \(packageURL.absoluteString): \(error) (ignored, keeping package)")
                     // don't skip packages that have unrecognised errors
                     return packageURL
                 case .notFound:
