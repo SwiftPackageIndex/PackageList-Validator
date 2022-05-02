@@ -202,7 +202,7 @@ func findDependencies(packageURL: PackageURL,
             if error.code == 256 {
                 if !Validator.knownBadPackages
                     .contains(packageURL.absoluteString.lowercased()) {
-                    print("Warning: invalid package: \(packageURL): The file “Package.swift” couldn’t be opened.")
+                    print("Warning: invalid package: \(packageURL) The file “Package.swift” couldn’t be opened.")
                 }
                 throw AppError.invalidPackage(url: packageURL)
             }
