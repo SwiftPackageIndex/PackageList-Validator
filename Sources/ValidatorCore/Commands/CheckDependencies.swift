@@ -110,6 +110,8 @@ extension Validator {
         "https://github.com/palle-k/DL4S.git",
         // Using .iOS(.v13) in a tools-version:5.0 file
         "https://github.com/piemonte/Position.git",
+        // Uses macOS and iOS ifdef to define local variable but doesn't handle Linux (where we run)
+        "https://github.com/skywinder/web3swift.git",
     ].map { $0.lowercased() }
 }
 
