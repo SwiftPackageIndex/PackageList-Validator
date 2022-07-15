@@ -1,0 +1,284 @@
+{
+  "cLanguageStandard" : null,
+  "cxxLanguageStandard" : null,
+  "dependencies" : [
+    {
+      "sourceControl" : [
+        {
+          "identity" : "swift-argument-parser",
+          "location" : {
+            "remote" : [
+              "https://github.com/apple/swift-argument-parser"
+            ]
+          },
+          "nameForTargetDependencyResolutionOnly" : "swift-argument-parser",
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "0.2.0",
+                "upperBound" : "1.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "parser",
+          "location" : {
+            "remote" : [
+              "https://github.com/finestructure/Parser"
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "0.0.0",
+                "upperBound" : "1.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "shellout",
+          "location" : {
+            "remote" : [
+              "https://github.com/JohnSundell/ShellOut.git"
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "2.0.0",
+                "upperBound" : "3.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "path.swift",
+          "location" : {
+            "remote" : [
+              "https://github.com/mxcl/Path.swift.git"
+            ]
+          },
+          "nameForTargetDependencyResolutionOnly" : "Path.swift",
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "1.0.0",
+                "upperBound" : "2.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "semanticversion",
+          "location" : {
+            "remote" : [
+              "https://github.com/SwiftPackageIndex/SemanticVersion"
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "0.2.0",
+                "upperBound" : "1.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "swift-snapshot-testing",
+          "location" : {
+            "remote" : [
+              "https://github.com/pointfreeco/swift-snapshot-testing.git"
+            ]
+          },
+          "nameForTargetDependencyResolutionOnly" : "SnapshotTesting",
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "1.7.2",
+                "upperBound" : "2.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "name" : "Arena",
+  "packageKind" : {
+    "root" : [
+      "/private/var/folders/nk/tlpts6bs799038htr6rx1xnc0000gn/T/8197E261-B7A9-47E3-8C11-517EF10F362A"
+    ]
+  },
+  "pkgConfig" : null,
+  "platforms" : [
+    {
+      "options" : [
+
+      ],
+      "platformName" : "macos",
+      "version" : "10.15"
+    }
+  ],
+  "products" : [
+    {
+      "name" : "arena",
+      "settings" : [
+
+      ],
+      "targets" : [
+        "ArenaCLI"
+      ],
+      "type" : {
+        "executable" : null
+      }
+    },
+    {
+      "name" : "ArenaCore",
+      "settings" : [
+
+      ],
+      "targets" : [
+        "ArenaCore"
+      ],
+      "type" : {
+        "library" : [
+          "dynamic"
+        ]
+      }
+    }
+  ],
+  "providers" : null,
+  "swiftLanguageVersions" : null,
+  "targets" : [
+    {
+      "dependencies" : [
+        {
+          "byName" : [
+            "ArenaCore",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "ArenaCLI",
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "regular"
+    },
+    {
+      "dependencies" : [
+        {
+          "product" : [
+            "ArgumentParser",
+            "swift-argument-parser",
+            null,
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "Parser",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "Path",
+            "Path.swift",
+            null,
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "SemanticVersion",
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "ShellOut",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "ArenaCore",
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "regular"
+    },
+    {
+      "dependencies" : [
+        {
+          "byName" : [
+            "ArenaCore",
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "SnapshotTesting",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "ArenaTests",
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "test"
+    }
+  ],
+  "toolsVersion" : {
+    "_version" : "5.3.0"
+  }
+}
+

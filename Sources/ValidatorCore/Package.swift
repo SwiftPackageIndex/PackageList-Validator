@@ -30,10 +30,16 @@ struct Package: Codable {
     }
 
     struct Dependency: Codable, Hashable {
-        var scm: [SCM]?
+        var sourceControl: [SourceControl]?
 
-        struct SCM: Codable, Hashable {
-            var location: PackageURL
+        var firstRemote: PackageURL? { sourceControl?.first?.location.remote.first }
+
+        struct SourceControl: Codable, Hashable {
+            var location: Remote
+
+            struct Remote: Codable, Hashable {
+                var remote: [PackageURL]
+            }
         }
     }
 
