@@ -52,6 +52,16 @@ final class ValidatorTests: XCTestCase {
                        "https://github.com/weichsel/ZIPFoundation.git")
     }
 
+    func test_Package_decode() throws {
+        let data = try fixtureData(for: "arena-package-dump.json")
+        let pkg = try JSONDecoder().decode(Package.self, from: data)
+        XCTAssertEqual(pkg.dependencies.count, 6)
+        XCTAssertEqual(
+            pkg.dependencies.first?.firstRemote?.absoluteString,
+            "https://github.com/apple/swift-argument-parser"
+        )
+    }
+
     func test_PackageURL_owner_repository() throws {
         do {
             let p = PackageURL.init(argument: "https://github.com/stephencelis/SQLite.swift.git")
@@ -298,8 +308,8 @@ private extension Package.ManifestURL {
 
 private extension Package.Dependency {
     init(location: PackageURL) {
-        self.init(scm: [
-            .init(location: location)
+        self.init(sourceControl: [
+            .init(location: .init(remote: [location]))
         ])
     }
 }
