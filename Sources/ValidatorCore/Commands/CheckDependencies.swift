@@ -73,6 +73,10 @@ extension Validator {
                 print("Warning: Using anonymous authentication -- you will quickly run into rate limiting issues\n")
             }
 
+            // Load package dump cache from previous chunk
+            Package.loadPackageDumpCache()
+            print("Cache loaded (\(Package.packageDumpCache.data.count) entries)")
+
             let inputURLs = try inputSource.packageURLs()
 
             print("Checking dependencies (\(limit ?? inputURLs.count) packages) ...")
@@ -89,6 +93,9 @@ extension Validator {
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)
             }
+
+            // Save out package dump cache for subsequent chunks
+            try Package.savePackageDumpCache()
         }
     }
 }

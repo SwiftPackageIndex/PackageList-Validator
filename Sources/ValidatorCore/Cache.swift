@@ -16,16 +16,15 @@ import Foundation
 
 
 struct Cache<T: Codable> {
-    struct Key<T: Codable>: Hashable, CustomStringConvertible {
+    struct Key: Codable, Hashable, CustomStringConvertible {
         let string: String
 
-        var description: String {
-            "[\(T.self) \(string)]"
-        }
+        var description: String { string }
     }
-    var data: [Key<T>: Data] = [:]
 
-    subscript(key: Key<T>) -> T? {
+    var data: [Key: Data] = [:]
+
+    subscript(key: Key) -> T? {
         get {
             if let data = data[key] {
                 // print("Cache hit: \(key)")
@@ -37,4 +36,25 @@ struct Cache<T: Codable> {
             data[key] = try! JSONEncoder().encode(newValue)
         }
     }
+
+}
+
+
+extension Cache {
+
+    static func load(from cachePath: String) -> Self {
+        if Current.fileManager.fileExists(cachePath) {
+            if let contents = Current.fileManager.contents(cachePath),
+               let data = try? JSONDecoder().decode([Key: Data].self, from: contents) {
+                return .init(data: data)
+            }
+        }
+        return .init(data: [:])
+    }
+
+    func save(to cachePath: String) throws {
+        let contents = try JSONEncoder().encode(data)
+        try Current.fileManager.write(contents, cachePath)
+    }
+
 }
