@@ -53,6 +53,10 @@ extension Package {
 
     static var packageDumpCache = Cache<Package>()
 
+    static var cacheFilename: String { ".packageDumpCache" }
+    static func loadPackageDumpCache() { packageDumpCache = .load(from: cacheFilename) }
+    static func savePackageDumpCache() throws { try packageDumpCache.save(to: cacheFilename) }
+
     static func decode(from manifestURL: ManifestURL) throws -> Package {
         if let cached = packageDumpCache[Cache.Key(string: manifestURL.rawValue.absoluteString)] {
             return cached
