@@ -38,6 +38,12 @@ extension Validator {
         @Flag(name: .long, help: "enable detailed logging")
         var verbose = false
 
+        @Option(name: .long, help: "index of chunk to process (0..<number-of-chunks)")
+        var chunk: Int?
+
+        @Option(name: .long, help: "number of chunks to split the package list into")
+        var numberOfChunks: Int?
+
         @Argument(help: "Package urls to check")
         var packageUrls: [PackageURL] = []
 
@@ -110,11 +116,15 @@ extension Validator {
             let offset = min(offset, inputURLs.count - 1)
 
             print("Checking for redirects (\(prefix) packages) ...")
+            if let chunk = chunk, let numberOfChunks = numberOfChunks {
+                print("Chunk \(chunk) of \(numberOfChunks)")
+            }
 
             let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
             var normalized = Set(inputURLs.map { $0.normalized() })
             let updated = try inputURLs[offset...]
                 .prefix(prefix)
+                .chunk(index: chunk, of: numberOfChunks)
                 .enumerated()
                 .compactMap { (index, packageURL) -> PackageURL? in
                     let index = index + offset
