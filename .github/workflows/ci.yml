@@ -12,13 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Nightly Audit
+name: CI
 
-# on: 
-#   workflow_dispatch:
-#   schedule:
-#     - cron: '0 2 * * *'
 on:
+    workflow_dispatch:
     push:
       # branches: [ main ]
     pull_request:
@@ -33,10 +30,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        swift: ["5.7"]
+        swift: ["5.8"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: fwal/setup-swift@v1
+      - uses: SwiftPackageIndex/setup-swift@main
         with:
           swift-version: ${{ matrix.swift }}
 
