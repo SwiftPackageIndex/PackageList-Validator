@@ -33,7 +33,7 @@ jobs:
         swift: ["5.8"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: SwiftPackageIndex/setup-swift@main
+      - uses: swift-actions/setup-swift@v1
         with:
           swift-version: ${{ matrix.swift }}
 
