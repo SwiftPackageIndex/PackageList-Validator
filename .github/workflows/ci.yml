@@ -27,7 +27,9 @@ env:
 
 jobs:
   test-validator-Linux:
-    runs-on: swift:5.8.1-focal
+    runs-on: ubuntu-latest
+    container:
+      image: swift:5.8.1-focal
     steps:
       - name: Get swift version
         run: swift --version
