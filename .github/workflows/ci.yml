@@ -47,29 +47,29 @@ jobs:
       - name: Check dependencies
         run: ./check-dependencies.sh
 
-  test-validator-macOS:
-    strategy:
-      matrix:
-        os: [macos-latest]
-        swift: ["5.8"]
-    runs-on: macos-latest
-    steps:
-      - uses: swift-actions/setup-swift@v1
-        with:
-          swift-version: ${{ matrix.swift }}
+  # test-validator-macOS:
+  #   strategy:
+  #     matrix:
+  #       os: [macos-latest]
+  #       swift: ["5.8"]
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: swift-actions/setup-swift@v1
+  #       with:
+  #         swift-version: ${{ matrix.swift }}
 
-      - name: Get swift version
-        run: swift --version
+  #     - name: Get swift version
+  #       run: swift --version
 
-      - name: Checkout
-        uses: actions/checkout@v3
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
 
-      - name: Build validator
-        run: |
-          swift build
+  #     - name: Build validator
+  #       run: |
+  #         swift build
 
-      - name: Check redirects
-        run: ./check-redirects.sh
+  #     - name: Check redirects
+  #       run: ./check-redirects.sh
 
-      - name: Check dependencies
-        run: ./check-dependencies.sh
+  #     - name: Check dependencies
+  #       run: ./check-dependencies.sh
