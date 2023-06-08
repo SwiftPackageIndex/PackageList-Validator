@@ -26,17 +26,11 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  run_nightly:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        swift: ["5.8"]
-    runs-on: ${{ matrix.os }}
+  test-validator-Linux:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:5.8.1-focal
     steps:
-      - uses: swift-actions/setup-swift@v1
-        with:
-          swift-version: ${{ matrix.swift }}
-
       - name: Get swift version
         run: swift --version
 
@@ -52,3 +46,30 @@ jobs:
 
       - name: Check dependencies
         run: ./check-dependencies.sh
+
+  # test-validator-macOS:
+  #   strategy:
+  #     matrix:
+  #       os: [macos-latest]
+  #       swift: ["5.8"]
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: swift-actions/setup-swift@v1
+  #       with:
+  #         swift-version: ${{ matrix.swift }}
+
+  #     - name: Get swift version
+  #       run: swift --version
+
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+
+  #     - name: Build validator
+  #       run: |
+  #         swift build
+
+  #     - name: Check redirects
+  #       run: ./check-redirects.sh
+
+  #     - name: Check dependencies
+  #       run: ./check-dependencies.sh
