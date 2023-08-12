@@ -30,3 +30,45 @@ func fixturesDirectory(path: String = #file) -> URL {
     let testsDir = url.deletingLastPathComponent()
     return testsDir.appendingPathComponent("Fixtures")
 }
+
+
+// MARK: - Extension helpers
+
+@testable import ValidatorCore
+
+extension Package {
+    static func mock(dependencyURLs: [PackageURL]) -> Self {
+        .init(name: "",
+              products: [.mock],
+              dependencies: dependencyURLs.map { .init(location: $0) } )
+    }
+}
+
+
+extension Package.Product {
+    static let mock: Self = .init(name: "product")
+}
+
+
+extension Array where Element == String {
+    var asURLs: [PackageURL] {
+        compactMap(URL.init(string:))
+            .map(PackageURL.init(rawValue:))
+    }
+}
+
+
+extension Package.ManifestURL {
+    init(_ urlString: String) {
+        self.init(rawValue: URL(string: urlString)!)
+    }
+}
+
+
+extension Package.Dependency {
+    init(location: PackageURL) {
+        self.init(sourceControl: [
+            .init(location: .init(remote: [location]))
+        ])
+    }
+}

@@ -174,60 +174,6 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(urls, [A, B, x_git, Y_git, z_git])
     }
 
-    func test_issue_917() throws {
-        // Ensure we don't change existing package's capitalisation
-        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/917
-        // setup
-        let p1 = PackageURL(argument:
-                                "https://github.com/1fr3dg/ResourcePackage.git")!
-        let dep = PackageURL(argument:
-                                "https://github.com/1Fr3dG/SimpleEncrypter.git")!
-        let p2 = PackageURL(argument:
-                                "https://github.com/1fr3dg/SimpleEncrypter.git")!
-        Current.decodeManifest = { url in
-            url == .init("https://raw.githubusercontent.com/1fr3dg/ResourcePackage/main/Package.swift")
-            ? .mock(dependencyURLs: [dep])
-            : .mock(dependencyURLs: [])
-        }
-
-        // MUT
-        let urls = expandDependencies(inputURLs: [p1, p2], retries: 0)
-
-        // validate
-        XCTAssertEqual(urls, [p1, p2])
-    }
-
-    func test_issue_1449_DecodingError() throws {
-        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1449
-        // also
-        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1461
-
-        for toolsVersion in ["5.1", "5.2", "5.3", "5.4", "5.5"] {
-            // setup
-            let data = try fixtureData(for: "Issue1449-\(toolsVersion).json")
-
-            // MUT
-            let pkg = try JSONDecoder().decode(Package.self, from: data)
-
-            // validate
-            XCTAssertEqual(pkg.name, "ValidatorTest", "failed for: \(toolsVersion)")
-            XCTAssertEqual(pkg.toolsVersion?._version, "\(toolsVersion).0",
-                           "failed for: \(toolsVersion)")
-        }
-    }
-
-    func test_issue_1618_DecodingError() throws {
-        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/1618
-
-        // setup
-        let data = try fixtureData(for: "Issue1618.json")
-
-        // MUT
-        let pkg = try JSONDecoder().decode(Package.self, from: data)
-
-        // validate
-        XCTAssertEqual(pkg.name, "Bow OpenAPI")
-    }
 
     func test_ArraySlice_chunk() throws {
         do {
@@ -274,42 +220,4 @@ final class ValidatorTests: XCTestCase {
         XCTAssertEqual(MergeLists.merge(["b", "A"], ["c", "a"]), ["A", "b", "c"])
     }
 
-}
-
-
-extension Package {
-    static func mock(dependencyURLs: [PackageURL]) -> Self {
-        .init(name: "",
-              products: [.mock],
-              dependencies: dependencyURLs.map { .init(location: $0) } )
-    }
-}
-
-
-extension Package.Product {
-    static let mock: Self = .init(name: "product")
-}
-
-
-private extension Array where Element == String {
-    var asURLs: [PackageURL] {
-        compactMap(URL.init(string:))
-            .map(PackageURL.init(rawValue:))
-    }
-}
-
-
-private extension Package.ManifestURL {
-    init(_ urlString: String) {
-        self.init(rawValue: URL(string: urlString)!)
-    }
-}
-
-
-private extension Package.Dependency {
-    init(location: PackageURL) {
-        self.init(sourceControl: [
-            .init(location: .init(remote: [location]))
-        ])
-    }
 }
