@@ -32,13 +32,42 @@ struct Package: Codable {
     struct Dependency: Codable, Hashable {
         var sourceControl: [SourceControl]?
 
-        var firstRemote: PackageURL? { sourceControl?.first?.location.remote.first }
+        var firstRemote: PackageURL? { sourceControl?.first?.location.remote.first?.packageURL }
 
         struct SourceControl: Codable, Hashable {
-            var location: Remote
+            var location: Location
 
-            struct Remote: Codable, Hashable {
-                var remote: [PackageURL]
+            struct Location: Codable, Hashable {
+                var remote: [Remote]
+
+                struct Remote: Codable, Hashable {
+                    var packageURL: PackageURL
+
+                    init(packageURL: PackageURL) {
+                        self.packageURL = packageURL
+                    }
+
+                    enum CodingKeys: String, CodingKey {
+                        case packageURL = "urlString"
+                    }
+                    
+                    init(from decoder: Decoder) throws {
+                        do {
+                            // try and decode {"urlString": "..."}
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.packageURL = try container.decode(PackageURL.self, forKey: CodingKeys.packageURL)
+                        } catch {
+                            // try and decode plain "..."
+                            let container = try decoder.singleValueContainer()
+                            let urlString = try container.decode(String.self)
+                            guard let url = URL(string: urlString) else {
+                                throw DecodingError.dataCorrupted(.init(codingPath: container.codingPath,
+                                                                        debugDescription: "invalid url"))
+                            }
+                            self.packageURL = .init(rawValue: url)
+                        }
+                    }
+                }
             }
         }
     }

@@ -1,0 +1,661 @@
+{
+  "cLanguageStandard" : null,
+  "cxxLanguageStandard" : null,
+  "dependencies" : [
+    {
+      "sourceControl" : [
+        {
+          "identity" : "ink",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/JohnSundell/Ink.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "0.5.1",
+                "upperBound" : "1.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "plot",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/daveverwer/Plot.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "branch" : [
+              "sitemapindex"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "swiftprometheus",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/MrLotU/SwiftPrometheus.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "1.0.0-alpha",
+                "upperBound" : "2.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "dependencyresolution",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/SwiftPackageIndex/DependencyResolution"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "1.0.0",
+                "upperBound" : "2.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "spimanifest",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/SwiftPackageIndex/SPIManifest.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "1.0.0",
+                "upperBound" : "2.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "semanticversion",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/SwiftPackageIndex/SemanticVersion"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "0.3.0",
+                "upperBound" : "1.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "shellout",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/SwiftPackageIndex/ShellOut.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "revision" : [
+              "db112a2104eae7fa8412ea80210d0f60b89a377e"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "swift-package-manager",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/apple/swift-package-manager.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "branch" : [
+              "release/5.9"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "vaportoopenapi",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/dankinsoid/VaporToOpenAPI.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "4.0.0",
+                "upperBound" : "5.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "swift-custom-dump",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/pointfreeco/swift-custom-dump.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "0.10.0",
+                "upperBound" : "1.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "swift-parsing",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/pointfreeco/swift-parsing.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "0.12.0",
+                "upperBound" : "1.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "swift-snapshot-testing",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/pointfreeco/swift-snapshot-testing.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "1.11.1",
+                "upperBound" : "2.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "swiftsoup",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/scinfu/SwiftSoup.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "2.3.2",
+                "upperBound" : "3.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "soto",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/soto-project/soto.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "6.0.0",
+                "upperBound" : "7.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "fluent-postgres-driver",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/vapor/fluent-postgres-driver.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "2.0.0",
+                "upperBound" : "3.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "fluent",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/vapor/fluent.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "4.0.0",
+                "upperBound" : "5.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sourceControl" : [
+        {
+          "identity" : "vapor",
+          "location" : {
+            "remote" : [
+              {
+                "urlString" : "https://github.com/vapor/vapor.git"
+              }
+            ]
+          },
+          "productFilter" : null,
+          "requirement" : {
+            "range" : [
+              {
+                "lowerBound" : "4.0.0",
+                "upperBound" : "5.0.0"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "name" : "SPI-Server",
+  "packageKind" : {
+    "root" : [
+      "/private/var/folders/nk/tlpts6bs799038htr6rx1xnc0000gn/T/FA998C18-A533-4F2F-8E09-64429F689D8B"
+    ]
+  },
+  "pkgConfig" : null,
+  "platforms" : [
+    {
+      "options" : [
+
+      ],
+      "platformName" : "macos",
+      "version" : "12.0"
+    }
+  ],
+  "products" : [
+
+  ],
+  "providers" : null,
+  "swiftLanguageVersions" : [
+    "5"
+  ],
+  "targets" : [
+    {
+      "dependencies" : [
+        {
+          "byName" : [
+            "App",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "Run",
+      "packageAccess" : false,
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "executable"
+    },
+    {
+      "dependencies" : [
+        {
+          "byName" : [
+            "Ink",
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "Plot",
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "S3Store",
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "SPIManifest",
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "SemanticVersion",
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "SwiftPrometheus",
+            null
+          ]
+        },
+        {
+          "byName" : [
+            "SwiftSoup",
+            null
+          ]
+        },
+        {
+          "product" : [
+            "CustomDump",
+            "swift-custom-dump",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "DependencyResolution",
+            "DependencyResolution",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "Fluent",
+            "fluent",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "FluentPostgresDriver",
+            "fluent-postgres-driver",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "Parsing",
+            "swift-parsing",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "ShellOut",
+            "ShellOut",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "SwiftPMDataModel-auto",
+            "swift-package-manager",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "SwiftPMPackageCollections",
+            "swift-package-manager",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "Vapor",
+            "vapor",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "VaporToOpenAPI",
+            "VaporToOpenAPI",
+            null,
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "App",
+      "packageAccess" : false,
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "regular"
+    },
+    {
+      "dependencies" : [
+        {
+          "product" : [
+            "SotoS3",
+            "soto",
+            null,
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "S3Store",
+      "packageAccess" : false,
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "regular"
+    },
+    {
+      "dependencies" : [
+        {
+          "product" : [
+            "SnapshotTesting",
+            "swift-snapshot-testing",
+            null,
+            null
+          ]
+        },
+        {
+          "product" : [
+            "XCTVapor",
+            "vapor",
+            null,
+            null
+          ]
+        },
+        {
+          "target" : [
+            "App",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+        "__Snapshots__",
+        "Fixtures"
+      ],
+      "name" : "AppTests",
+      "packageAccess" : false,
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "test"
+    },
+    {
+      "dependencies" : [
+        {
+          "target" : [
+            "S3Store",
+            null
+          ]
+        }
+      ],
+      "exclude" : [
+
+      ],
+      "name" : "S3StoreTests",
+      "packageAccess" : false,
+      "resources" : [
+
+      ],
+      "settings" : [
+
+      ],
+      "type" : "test"
+    }
+  ],
+  "toolsVersion" : {
+    "_version" : "5.8.0"
+  }
+}
