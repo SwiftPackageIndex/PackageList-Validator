@@ -68,7 +68,7 @@ extension Package.ManifestURL {
 extension Package.Dependency {
     init(location: PackageURL) {
         self.init(sourceControl: [
-            .init(location: .init(remote: [location]))
+            .init(location: .init(remote: [.init(packageURL: location)]))
         ])
     }
 }

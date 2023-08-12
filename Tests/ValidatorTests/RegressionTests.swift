@@ -76,4 +76,24 @@ final class RegressionTests: XCTestCase {
         XCTAssertEqual(pkg.name, "Bow OpenAPI")
     }
 
+    func test_issue_2551_DecodingError() throws {
+        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/2551
+
+        //        try Validator.CheckDependencies.run(inputSource: .packageURLs([
+        //            .init(argument: "https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server")!
+        //        ]), retries: 0)
+
+        // setup
+        let data = try fixtureData(for: "Issue2551.json")
+
+        // MUT
+        let pkg = try JSONDecoder().decode(Package.self, from: data)
+
+        // validate
+        XCTAssertEqual(pkg.name, "SPI-Server")
+        XCTAssertEqual(pkg.dependencies.count, 17)
+        XCTAssertEqual(pkg.dependencies.first?.firstRemote,
+                       .init(rawValue: URL(string: "https://github.com/JohnSundell/Ink.git")!))
+    }
+
 }
