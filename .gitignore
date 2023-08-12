@@ -2,3 +2,4 @@
 .swiftpm
 packages.json
 .vscode/
+.DS_Store
