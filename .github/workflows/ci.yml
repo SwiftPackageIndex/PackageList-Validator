@@ -29,7 +29,7 @@ jobs:
   test-validator-Linux:
     runs-on: ubuntu-latest
     container:
-      image: swiftlang/swift@sha256:61b96c099daf37c07dd03cc4c7a8c07f41c91df1a6ed8cf3d433387f0a719a9c  # swiftlang/swift:nightly-5.9-focal
+      image: swiftlang/swift@sha256:f212429011a4c3592ffaa660fd78b5bc149e9df7920da02dfc0e7a761582fa10  # swiftlang/swift:nightly-5.9-focal 2023-08-16
     steps:
       - name: Get swift version
         run: swift --version
