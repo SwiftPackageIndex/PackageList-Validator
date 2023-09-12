@@ -21,7 +21,7 @@ public struct Validator: ParsableCommand {
         subcommands: [CheckDependencies.self,
                       CheckRedirects.self,
                       MergeLists.self,
-                      RemoveDenyList.self,
+                      ApplyDenyList.self,
                       Version.self],
         defaultSubcommand: Version.self
     )

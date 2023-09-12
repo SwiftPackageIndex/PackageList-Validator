@@ -34,7 +34,7 @@ final class RemoveDenyListTests: XCTestCase {
         ].map { PackageURL(rawValue: URL(string: $0)!) }
 
         // MUT
-        let command = Validator.RemoveDenyList()
+        let command = Validator.ApplyDenyList()
         let processedList = command.processPackageDenyList(packageList: packageList, denyList: denyList)
 
         XCTAssertEqual(processedList, [

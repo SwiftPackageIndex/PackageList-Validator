@@ -16,12 +16,12 @@ import ArgumentParser
 import Foundation
 
 extension Validator {
-    struct RemoveDenyList: ParsableCommand {
+    struct ApplyDenyList: ParsableCommand {
         @Option(name: .shortAndLong, help: "Path to packages.json")
         var packagesFile: String
 
         @Option(name: .shortAndLong, help: "Path to denylist.json")
-        var denylistFile: String
+        var denyFile: String
 
         private struct DeniedPackage: Decodable {
             var packageUrl: String
@@ -31,7 +31,7 @@ extension Validator {
             }
         }
 
-        func getDenylistUrls(from path: String) throws -> [PackageURL] {
+        func getDenyListUrls(from path: String) throws -> [PackageURL] {
             let fileUrl = URL(fileURLWithPath: path)
             let data = try Data(contentsOf: fileUrl)
             let deniedPackages = try JSONDecoder().decode([DeniedPackage].self, from: data)
@@ -77,8 +77,8 @@ extension Validator {
 
         mutating func run() throws {
             let packageUrls = try InputSource.file(packagesFile).packageURLs()
-            let denylistUrls = try getDenylistUrls(from: denylistFile)
-            let processedPackageList = processPackageDenyList(packageList: packageUrls, denyList: denylistUrls)
+            let denyListUrls = try getDenyListUrls(from: denyFile)
+            let processedPackageList = processPackageDenyList(packageList: packageUrls, denyList: denyListUrls)
 
             let fileURL = URL(fileURLWithPath: packagesFile)
             try packageListEncoder.encode(processedPackageList).write(to: fileURL)
