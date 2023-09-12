@@ -18,7 +18,11 @@ import ArgumentParser
 public struct Validator: ParsableCommand {
     public static var configuration = CommandConfiguration(
         abstract: "SPI Validator",
-        subcommands: [CheckDependencies.self, CheckRedirects.self, MergeLists.self, Version.self],
+        subcommands: [CheckDependencies.self,
+                      CheckRedirects.self,
+                      MergeLists.self,
+                      ApplyDenyList.self,
+                      Version.self],
         defaultSubcommand: Version.self
     )
 
