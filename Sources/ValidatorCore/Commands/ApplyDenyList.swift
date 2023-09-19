@@ -66,7 +66,7 @@ extension Validator {
             return Array(
                 Set(packageList.map(CaseInsensitivePackageURL.init))
                     .subtracting(Set(denyList.map(CaseInsensitivePackageURL.init)))
-            ).map(\.url).sorted { $0.absoluteString < $1.absoluteString }
+            ).map(\.url).sorted { $0.absoluteString.lowercased() < $1.absoluteString.lowercased() }
         }
 
         var packageListEncoder: JSONEncoder {
