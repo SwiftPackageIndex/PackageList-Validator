@@ -14,4 +14,10 @@
 
 import ValidatorCore
 
-Validator.main()
+
+@main
+struct Main {
+    static func main() async throws {
+        await Validator.main()
+    }
+}

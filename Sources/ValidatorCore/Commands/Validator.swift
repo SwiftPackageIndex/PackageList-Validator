@@ -15,7 +15,7 @@
 import ArgumentParser
 
 
-public struct Validator: ParsableCommand {
+public struct Validator: AsyncParsableCommand {
     public static var configuration = CommandConfiguration(
         abstract: "SPI Validator",
         subcommands: [CheckDependencies.self,
@@ -26,7 +26,7 @@ public struct Validator: ParsableCommand {
         defaultSubcommand: Version.self
     )
 
-    public mutating func run() throws {}
+    public func run() async throws {}
 
     public init() {}
 }
