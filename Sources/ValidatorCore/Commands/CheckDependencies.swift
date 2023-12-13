@@ -195,7 +195,7 @@ func findDependencies(packageURL: PackageURL,
                       retries: Int) throws -> [PackageURL] {
     try Retry.attempt("Finding dependencies", retries: retries) {
         do {
-            let client = HTTPClient(eventLoopGroupProvider: .createNew)
+            let client = HTTPClient(eventLoopGroupProvider: .singleton)
             defer { try? client.syncShutdown() }
             return try findDependencies(client: client, url: packageURL).wait()
         } catch AppError.rateLimited(until: let reset) where waitIfRateLimited {

@@ -78,7 +78,7 @@ final class ValidatorTests: XCTestCase {
     func test_getManifestURL() throws {
         // setup
         let pkgURL = PackageURL(argument: "https://github.com/foo/bar")!
-        let client = HTTPClient(eventLoopGroupProvider: .createNew)
+        let client = HTTPClient(eventLoopGroupProvider: .singleton)
         defer { try? client.syncShutdown() }
 
         // MUT
