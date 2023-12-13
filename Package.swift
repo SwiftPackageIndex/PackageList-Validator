@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.8
 
 // Copyright Dave Verwer, Sven A. Schmidt, and other contributors.
 //
@@ -23,17 +23,14 @@ let package = Package(
       .executable(name: "validator", targets: ["validator"])
     ],
     dependencies: [
-        .package(name: "async-http-client",
-                 url: "https://github.com/swift-server/async-http-client.git", from: "1.2.0"),
-        .package(name: "swift-argument-parser",
-                 url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
+        .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.2.0"),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
         .package(url: "https://github.com/JohnSundell/ShellOut.git", from: "2.3.0"),
-        .package(name: "swift-tagged",
-                 url: "https://github.com/pointfreeco/swift-tagged.git", from: "0.5.0"),
+        .package(url: "https://github.com/pointfreeco/swift-tagged.git", from: "0.5.0"),
         .package(url: "https://github.com/apple/swift-algorithms.git", from: "1.0.0")
     ],
     targets: [
-        .target(name: "validator", dependencies: ["ValidatorCore"]),
+        .executableTarget(name: "validator", dependencies: ["ValidatorCore"]),
         .target(
             name: "ValidatorCore",
             dependencies: [
