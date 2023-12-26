@@ -8,6 +8,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 import ArgumentParser
 import CanonicalPackageURL
 
@@ -43,16 +45,22 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
         // fetch all dependencies
         let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
-        let dependencies = try await api.fetchDependencies()
-        print("Dependencies:", dependencies.count)
+        let packages = try await api.fetchDependencies()
+        print("Total packages:", packages.count)
 
-        let missing = dependencies.missingDependencies()
+        let missing = packages.missingDependencies()
         print("Not indexed:", missing.count)
 
         // resolve redirects
-        for dep in missing.prefix(limit) {
-            print(dep.url.canonicalPath)
+        var newPackages = [PackageURL]()
+        for dep in missing {
+            print("Resolving:", dep.url.canonicalPath)
+            guard let resolved = await Current.resolvePackageRedirectsAsync(dep.packageURL).url else { continue }
+            newPackages.append(resolved)
+            if newPackages.count >= limit { break }
         }
+
+        print("New packages:", newPackages.count)
     }
 
     public init() { }
@@ -88,5 +96,20 @@ extension HashableURL: Equatable {
 extension HashableURL: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(url.canonicalPath)
+    }
+}
+
+
+extension HashableURL {
+    var packageURL: PackageURL {
+        .init(url.canonicalURL)
+    }
+}
+
+
+extension CanonicalPackageURL {
+#warning("move to CanonicalPackageURL package")
+    var canonicalURL: URL {
+        .init(string: "https://\(hostname)/\(path)")!
     }
 }

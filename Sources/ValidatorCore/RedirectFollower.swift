@@ -100,6 +100,14 @@ func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFut
 }
 
 
+func resolveRedirects(for url: PackageURL) async -> Redirect {
+    await withCheckedContinuation { continuation in
+        let _ = RedirectFollower(initialURL: url) {
+            continuation.resume(returning: $0)
+        }
+    }
+}
+
 
 /// Resolve redirects for package urls. In particular, this strips the `.git` extension from the test url, because it would always lead to a redirect. It also normalizes the output to always have a `.git` extension.
 /// - Parameters:
