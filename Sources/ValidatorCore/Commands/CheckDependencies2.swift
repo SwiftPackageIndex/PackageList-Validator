@@ -9,6 +9,7 @@
 // limitations under the License.
 
 import ArgumentParser
+import CanonicalPackageURL
 
 
 public struct CheckDependencies2: AsyncParsableCommand {
@@ -41,8 +42,27 @@ public struct CheckDependencies2: AsyncParsableCommand {
         let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
         let dependencies = try await api.fetchDependencies()
         print("Dependencies:", dependencies.count)
+
+        let missing = dependencies.missingDependencies()
+        print("Not indexed:", missing.count)
+
+        // resolve redirects
+        _ = missing.prefix(10)
+            .map {
+                print($0.canonicalPath)
+            }
     }
 
     public init() { }
 
+}
+
+
+extension [SwiftPackageIndexAPI.PackageRecord] {
+#warning("add test")
+    func missingDependencies() -> [CanonicalPackageURL] {
+        let indexedPaths = Set(map(\.url.canonicalPath))
+        let all = flatMap { $0.resolvedDependencies ?? [] }
+        return all.filter { !indexedPaths.contains($0.canonicalPath) }
+    }
 }
