@@ -16,6 +16,9 @@ public struct CheckDependencies2: AsyncParsableCommand {
     @Option(name: .long)
     var apiBaseURL: String = "https://swiftpackageindex.com"
 
+    @Option(name: .shortAndLong)
+    var limit: Int = .max
+
     @Option(name: .long)
     var spiApiToken: String
 
@@ -47,10 +50,9 @@ public struct CheckDependencies2: AsyncParsableCommand {
         print("Not indexed:", missing.count)
 
         // resolve redirects
-        _ = missing.prefix(10)
-            .map {
-                print($0.canonicalPath)
-            }
+        for dep in missing.prefix(limit) {
+            print(dep.url.canonicalPath)
+        }
     }
 
     public init() { }
@@ -60,9 +62,31 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
 extension [SwiftPackageIndexAPI.PackageRecord] {
 #warning("add test")
-    func missingDependencies() -> [CanonicalPackageURL] {
+    func missingDependencies() -> Set<HashableURL> {
         let indexedPaths = Set(map(\.url.canonicalPath))
         let all = flatMap { $0.resolvedDependencies ?? [] }
-        return all.filter { !indexedPaths.contains($0.canonicalPath) }
+        return Set(all
+            .filter { !indexedPaths.contains($0.canonicalPath) }
+            .map { HashableURL(url: $0) }
+        )
+    }
+}
+
+
+struct HashableURL {
+    var url: CanonicalPackageURL
+}
+
+#warning("add test")
+extension HashableURL: Equatable {
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.url.canonicalPath == rhs.url.canonicalPath
+    }
+}
+
+#warning("add test")
+extension HashableURL: Hashable {
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(url.canonicalPath)
     }
 }
