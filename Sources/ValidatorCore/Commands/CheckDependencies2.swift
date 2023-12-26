@@ -12,9 +12,35 @@ import ArgumentParser
 
 
 public struct CheckDependencies2: AsyncParsableCommand {
-    
+    @Option(name: .long)
+    var apiBaseURL: String = "https://swiftpackageindex.com"
+
+    @Option(name: .long)
+    var spiApiToken: String
+
     public func run() async throws {
         print("check depdendencies 2")
+
+        // CheckDependencies
+        // - expandDependencies([PackageURL])
+        //   - flatMap
+        //     - findDependencies(PackageURL)
+        //     - get package manifest
+        //     - decode manifest
+        //     - package dump
+        //     - get dependencies
+        //   - resolvePackageRedirects([PackageURL])
+        //   - dropForks([PackageURL])
+        //   - dropNoProducts([PackageURL])  -- re-consider this
+        //   - mergeWithExisting([PackageURL])
+        //   - sort
+        // - save
+
+
+        // fetch all dependencies
+        let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
+        let dependencies = try await api.fetchDependencies()
+        print("Dependencies:", dependencies.count)
     }
 
     public init() { }
