@@ -57,7 +57,10 @@ public struct CheckDependencies2: AsyncParsableCommand {
         defer { try? client.syncShutdown() }
 
         var newPackages = [PackageURL]()
-        for dep in missing {
+        for (idx, dep) in missing.enumerated() {
+            if idx % 10 == 0 {
+                print("Progress:", idx, "/", missing.count)
+            }
             // resolve redirects
             print("Processing:", dep.packageURL, "...")
             guard let resolved = await Current.resolvePackageRedirectsAsync(dep.packageURL).url else {
@@ -65,7 +68,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
                 print("  ... redirect resolution returned nil")
                 continue
             }
-            if resolved.absoluteString != dep.packageURL.absoluteString {
+            if resolved.canonicalPackageURL.canonicalPath != dep.canonicalPath {
                 print("  ... redirected to:", resolved)
             }
             if allPackages.contains(resolved.canonicalPackageURL) {
@@ -75,11 +78,12 @@ public struct CheckDependencies2: AsyncParsableCommand {
             // drop forks
             let repo = try await Current.fetchRepositoryAsync(client, resolved)
             guard !repo.fork else {
-                print("  ... is fork")
+                print("  ... fork")
                 continue
             }
             // TODO: drop no products?
             newPackages.append(resolved.appendingGitExtension())
+            print("ADD (\(newPackages.count)):", resolved.appendingGitExtension())
             if newPackages.count >= limit {
                 print("  ... limit reached.")
                 break
