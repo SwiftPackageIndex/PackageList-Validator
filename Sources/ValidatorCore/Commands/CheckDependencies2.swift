@@ -57,7 +57,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
         var newPackages = [PackageURL]()
         for dep in missing {
             // resolve redirects
-            print("Processing:", dep.url.canonicalPath, "...")
+            print("Processing:", dep.canonicalPath, "...")
             guard let resolved = await Current.resolvePackageRedirectsAsync(dep.packageURL).url else {
                 // TODO: consider adding retry for some errors
                 print("  ... redirect resolution returned nil")
@@ -90,46 +90,18 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
 extension [SwiftPackageIndexAPI.PackageRecord] {
 #warning("add test")
-    func missingDependencies() -> Set<HashableURL> {
+    func missingDependencies() -> Set<TransformedHashable<CanonicalPackageURL, String>> {
         let indexedPaths = Set(map(\.url.canonicalPath))
         let all = flatMap { $0.resolvedDependencies ?? [] }
         return Set(all
             .filter { !indexedPaths.contains($0.canonicalPath) }
-            .map { HashableURL(url: $0) }
+            .map { TransformedHashable($0, transform: \.canonicalPath) }
         )
     }
 }
 
 
-struct HashableURL {
-    var url: CanonicalPackageURL
-}
-
-#warning("add test")
-extension HashableURL: Equatable {
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.url.canonicalPath == rhs.url.canonicalPath
-    }
-}
-
-#warning("add test")
-extension HashableURL: Hashable {
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(url.canonicalPath)
-    }
-}
-
-
-extension HashableURL {
-    var packageURL: PackageURL {
-        .init(url.canonicalURL)
-    }
-}
-
-
 extension CanonicalPackageURL {
-#warning("move to CanonicalPackageURL package")
-    var canonicalURL: URL {
-        .init(string: "https://\(hostname)/\(path)")!
-    }
+    var packageURL: PackageURL { .init(canonicalURL) }
+    var canonicalURL: URL { .init(string: "https://\(hostname)/\(path)")! }
 }
