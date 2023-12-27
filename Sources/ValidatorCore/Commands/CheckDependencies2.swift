@@ -89,7 +89,6 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
 
 extension [SwiftPackageIndexAPI.PackageRecord] {
-#warning("add test")
     func missingDependencies() -> Set<TransformedHashable<CanonicalPackageURL, String>> {
         let indexedPaths = Set(map(\.url.canonicalPath))
         let all = flatMap { $0.resolvedDependencies ?? [] }
