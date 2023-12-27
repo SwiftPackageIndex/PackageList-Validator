@@ -45,17 +45,17 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
         // fetch all dependencies
         let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
-        let packages = try await api.fetchDependencies()
-        print("Total packages:", packages.count)
+        let records = try await api.fetchDependencies()
+        let allPackages = records.allPackages
+        print("Total packages:", allPackages.count)
 
-        let missing = packages.missingDependencies()
+        let allDependencies = records.allDependencies
+        let missing = allDependencies.subtracting(allPackages)
         print("Not indexed:", missing.count)
 
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
         defer { try? client.syncShutdown() }
 
-#warning("refactor this with `missingDependencies` above")
-        let indexedCanonicalPaths = Set(packages.map(\.url.canonicalPath))
         var newPackages = [PackageURL]()
         for dep in missing {
             // resolve redirects
@@ -68,7 +68,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
             if resolved.absoluteString != dep.packageURL.absoluteString {
                 print("  ... redirected to:", resolved)
             }
-            if indexedCanonicalPaths.contains(resolved.canonicalPackageURL.canonicalPath) {
+            if allPackages.contains(resolved.canonicalPackageURL) {
                 print("  ... already indexed")
                 continue
             }
@@ -89,7 +89,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
         print("New packages:", newPackages.count)
 
         // merge with existing and sort result
-        let input = packages.map { $0.url.packageURL }
+        let input = allPackages.map { $0.packageURL }
         let merged = newPackages.mergingWithExisting(urls: input)
             .sorted(by: { $0.lowercased() < $1.lowercased() })
 
@@ -103,13 +103,27 @@ public struct CheckDependencies2: AsyncParsableCommand {
 }
 
 
+typealias UniqueCanonicalPackageURLs = Set<TransformedHashable<CanonicalPackageURL, String>>
+
+
+extension UniqueCanonicalPackageURLs {
+    func contains(_ member: CanonicalPackageURL) -> Bool {
+        contains(.init(member, transform: \.canonicalPath))
+    }
+}
+
+
 extension [SwiftPackageIndexAPI.PackageRecord] {
-    func missingDependencies() -> Set<TransformedHashable<CanonicalPackageURL, String>> {
-        let indexedPaths = Set(map(\.url.canonicalPath))
-        let all = flatMap { $0.resolvedDependencies ?? [] }
-        return Set(all
-            .filter { !indexedPaths.contains($0.canonicalPath) }
-            .map { TransformedHashable($0, transform: \.canonicalPath) }
+    var allPackages: UniqueCanonicalPackageURLs {
+        Set(
+            map { TransformedHashable($0.url, transform: \.canonicalPath) }
+        )
+    }
+
+    var allDependencies: UniqueCanonicalPackageURLs {
+        let deps = flatMap { $0.resolvedDependencies ?? [] }
+        return Set(
+            deps.map { TransformedHashable($0, transform: \.canonicalPath) }
         )
     }
 }

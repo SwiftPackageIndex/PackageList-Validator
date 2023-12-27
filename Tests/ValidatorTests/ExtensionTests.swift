@@ -21,18 +21,51 @@ import CanonicalPackageURL
 
 final class ExtensionsTests: XCTestCase {
 
-    func test_missingDependencies() throws {
-        let p1 = CanonicalPackageURL(prefix: .gitAt, hostname: "github.com", path: "org/1")
-        let p1_prime = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/1")
-        let p2 = CanonicalPackageURL(prefix: .http, hostname: "github.com", path: "org/2")
-        let p3 = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/3")
+    func test_allPackages() throws {
         let records: [SwiftPackageIndexAPI.PackageRecord] = [
-            .init(id: .init(), url: p1, resolvedDependencies: []),
-            .init(id: .init(), url: p2, resolvedDependencies: [p1_prime, p3]),
+            .init(.p1, [.p3]),
+            .init(.p2, [.p4]),
+            .init(.p3, [.p2, .p4, .p5]),
         ]
-        let missing = records.missingDependencies()
-        XCTAssertEqual(missing.count, 1)
-        XCTAssertEqual(missing.first?.canonicalPath, p3.canonicalPath)
+        XCTAssertEqual(records.allPackages.sorted(by: { $0.canonicalPath < $1.canonicalPath }).map(\.path),
+                       [CanonicalPackageURL.p1, .p2, .p3].map(\.path))
     }
 
+    func test_allDependencies() throws {
+        let records: [SwiftPackageIndexAPI.PackageRecord] = [
+            .init(.p1, [.p3]),
+            .init(.p2, [.p4]),
+            .init(.p3, [.p2, .p4, .p5]),
+        ]
+        XCTAssertEqual(records.allDependencies.sorted(by: { $0.canonicalPath < $1.canonicalPath }).map(\.path),
+                       [CanonicalPackageURL.p2, .p3, .p4, .p5].map(\.path))
+    }
+
+    func test_missingDependencies() throws {
+        let p1_prime = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/1")
+        let records: [SwiftPackageIndexAPI.PackageRecord] = [
+            .init(.p1, []),
+            .init(.p2, [p1_prime, .p3]),
+        ]
+        let missing = records.allDependencies.subtracting(records.allPackages)
+        XCTAssertEqual(missing.count, 1)
+        XCTAssertEqual(missing.first?.canonicalPath, CanonicalPackageURL.p3.canonicalPath)
+    }
+
+}
+
+
+private extension CanonicalPackageURL {
+    static let p1 = CanonicalPackageURL(prefix: .gitAt, hostname: "github.com", path: "org/1")
+    static let p2 = CanonicalPackageURL(prefix: .http, hostname: "github.com", path: "org/2")
+    static let p3 = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/3")
+    static let p4 = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/4")
+    static let p5 = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/5")
+}
+
+
+private extension SwiftPackageIndexAPI.PackageRecord {
+    init(_ url: CanonicalPackageURL, _ dependencies: [CanonicalPackageURL]) {
+        self.init(id: .init(), url: url, resolvedDependencies: dependencies)
+    }
 }
