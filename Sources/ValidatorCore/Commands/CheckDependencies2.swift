@@ -11,6 +11,7 @@
 import Foundation
 
 import ArgumentParser
+import AsyncHTTPClient
 import CanonicalPackageURL
 
 
@@ -42,7 +43,6 @@ public struct CheckDependencies2: AsyncParsableCommand {
         //   - sort
         // - save
 
-
         // fetch all dependencies
         let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
         let packages = try await api.fetchDependencies()
@@ -51,16 +51,36 @@ public struct CheckDependencies2: AsyncParsableCommand {
         let missing = packages.missingDependencies()
         print("Not indexed:", missing.count)
 
-        // resolve redirects
+        let client = HTTPClient(eventLoopGroupProvider: .singleton)
+        defer { try? client.syncShutdown() }
+
         var newPackages = [PackageURL]()
         for dep in missing {
-            print("Resolving:", dep.url.canonicalPath)
-            guard let resolved = await Current.resolvePackageRedirectsAsync(dep.packageURL).url else { continue }
+            // resolve redirects
+            print("Processing:", dep.url.canonicalPath, "...")
+            guard let resolved = await Current.resolvePackageRedirectsAsync(dep.packageURL).url else {
+                // TODO: consider adding retry for some errors
+                print("  ... redirect resolution returned nil")
+                continue
+            }
+            // drop forks
+            let repo = try await Current.fetchRepositoryAsync(client, resolved)
+            guard !repo.fork else {
+                print("  ... is fork")
+                continue
+            }
+            // TODO: drop no products?
             newPackages.append(resolved)
-            if newPackages.count >= limit { break }
+            if newPackages.count >= limit {
+                print("  ... limit reached.")
+                break
+            }
         }
 
         print("New packages:", newPackages.count)
+
+        // TODO: merge with existing
+        // TODO: sort
     }
 
     public init() { }

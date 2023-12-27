@@ -268,10 +268,13 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
 
 func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventLoopFuture<T> {
     let eventLoop = client.eventLoopGroup.next()
+    guard let token = Current.githubToken() else {
+        return eventLoop.makeFailedFuture(AppError.githubTokenNotSet)
+    }
     let headers = HTTPHeaders([
         ("User-Agent", "SPI-Validator"),
-        Current.githubToken().map { ("Authorization", "Bearer \($0)") }
-    ].compactMap({ $0 }))
+        ("Authorization", "Bearer \(token)")
+    ])
     let rateLimitHeadroom = 20
 
     do {

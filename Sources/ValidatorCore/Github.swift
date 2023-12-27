@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import AsyncHTTPClient
 import Foundation
+
+import AsyncHTTPClient
 import NIO
 
 
@@ -120,6 +121,21 @@ extension Github {
                 repositoryCache[Cache.Key(string: url.absoluteString)] = repo
                 return repo
             }
+    }
+
+    static func fetchRepository(client: HTTPClient, url: PackageURL) async throws-> Repository {
+        let apiURL = URL(string: "https://api.github.com/repos/\(url.owner)/\(url.repository)")!
+        let key = Cache<Repository>.Key(string: apiURL.absoluteString)
+        if let cached = repositoryCache[key] {
+            return cached
+        }
+        do {
+            let repo = try await fetch(Repository.self, client: client, url: apiURL).get()
+            repositoryCache[key] = repo
+            return repo
+        } catch let AppError.requestFailed(_, code) where code == 404 {
+            throw AppError.repositoryNotFound(owner: url.owner, name: url.repository)
+        }
     }
 
 

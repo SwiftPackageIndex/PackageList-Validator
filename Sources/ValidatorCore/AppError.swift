@@ -18,6 +18,7 @@ import Foundation
 enum AppError: Error {
     case decodingError(context: String, underlyingError: Error, json: String)
     case dumpPackageError(String)
+    case githubTokenNotSet
     case invalidPackage(url: PackageURL)
     case invalidDenyListUrl(string: String)
     case ioError(String)
