@@ -15,7 +15,17 @@
 import Foundation
 
 
+#warning("add tests")
 extension URL {
+    func appendingGitExtension() -> Self {
+        let url = URL(string: absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "./")))!
+        if url.pathExtension.lowercased() == "git" {
+            return url.deletingPathExtension().appendingPathExtension("git")
+        } else {
+            return url.appendingPathExtension("git")
+        }
+    }
+
     func deletingGitExtension() -> URL {
         pathExtension == "git"
             ? deletingPathExtension()

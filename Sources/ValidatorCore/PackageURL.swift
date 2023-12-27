@@ -28,17 +28,11 @@ extension PackageURL {
     var owner: String { rawValue.deletingLastPathComponent().lastPathComponent }
 
     func appendingGitExtension() -> Self {
-        if rawValue.pathExtension.lowercased() == "git" { return self }
-        let url = URL(string: absoluteString
-                        .trimmingCharacters(in: CharacterSet(charactersIn: "/")))!
-            .appendingPathExtension("git")
-        return Self(rawValue: url)
+        .init(rawValue: rawValue.appendingGitExtension())
     }
 
     func deletingGitExtension() -> Self {
-        guard absoluteString.hasSuffix(".git") else { return self }
-        let url = URL(string: absoluteString.deletingGitExtension())!
-        return Self(rawValue: url)
+        .init(rawValue: rawValue.deletingGitExtension())
     }
 
     func lowercased() -> String {
@@ -47,7 +41,7 @@ extension PackageURL {
 
     func normalized() -> String {
         let str = lowercased()
-        return str.hasSuffix(".git") ? str : str + ".git"
+        return str.appendingGitExtension()
     }
 }
 

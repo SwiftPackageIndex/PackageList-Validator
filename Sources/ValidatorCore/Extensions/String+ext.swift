@@ -12,8 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
+
+#warning("add tests")
 extension String {
-    func deletingGitExtension() -> String {
+    func appendingGitExtension() -> Self {
+        let url = URL(string: trimmingCharacters(in: CharacterSet(charactersIn: "./")))!
+        if url.pathExtension.lowercased() == "git" {
+            return url.absoluteString.deletingGitExtension() + ".git"
+        } else {
+            return url.appendingPathExtension("git").absoluteString
+        }
+    }
+
+    func deletingGitExtension() -> Self {
         let suffix = ".git"
         if lowercased().hasSuffix(suffix) {
             return String(dropLast(suffix.count))
