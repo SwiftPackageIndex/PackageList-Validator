@@ -54,13 +54,22 @@ public struct CheckDependencies2: AsyncParsableCommand {
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
         defer { try? client.syncShutdown() }
 
+#warning("refactor this with `missingDependencies` above")
+        let indexedCanonicalPaths = Set(packages.map(\.url.canonicalPath))
         var newPackages = [PackageURL]()
         for dep in missing {
             // resolve redirects
-            print("Processing:", dep.canonicalPath, "...")
+            print("Processing:", dep.packageURL, "...")
             guard let resolved = await Current.resolvePackageRedirectsAsync(dep.packageURL).url else {
                 // TODO: consider adding retry for some errors
                 print("  ... redirect resolution returned nil")
+                continue
+            }
+            if resolved.absoluteString != dep.packageURL.absoluteString {
+                print("  ... redirected to:", resolved)
+            }
+            if indexedCanonicalPaths.contains(resolved.canonicalPackageURL.canonicalPath) {
+                print("  ... already indexed")
                 continue
             }
             // drop forks
@@ -70,7 +79,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
                 continue
             }
             // TODO: drop no products?
-            newPackages.append(resolved)
+            newPackages.append(resolved.appendingGitExtension())
             if newPackages.count >= limit {
                 print("  ... limit reached.")
                 break
@@ -79,8 +88,14 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
         print("New packages:", newPackages.count)
 
-        // TODO: merge with existing
-        // TODO: sort
+        // merge with existing and sort result
+        let input = packages.map { $0.url.packageURL }
+        let merged = newPackages.mergingWithExisting(urls: input)
+            .sorted(by: { $0.lowercased() < $1.lowercased() })
+
+        print("Total:", merged.count)
+
+#warning("load and merge package file")
     }
 
     public init() { }
@@ -102,5 +117,12 @@ extension [SwiftPackageIndexAPI.PackageRecord] {
 
 extension CanonicalPackageURL {
     var packageURL: PackageURL { .init(canonicalURL) }
-    var canonicalURL: URL { .init(string: "https://\(hostname)/\(path)")! }
+    var canonicalURL: URL { .init(string: "https://\(hostname)/\(path).git")! }
+}
+
+
+extension PackageURL {
+    var canonicalPackageURL: CanonicalPackageURL {
+        .init(absoluteString)!
+    }
 }
