@@ -15,11 +15,11 @@
 
 #warning("add test")
 @dynamicMemberLookup
-struct TransformedHashable<T, H>: Equatable, Hashable where H: Hashable {
-    var value: T
-    var transformed: H
+struct TransformedHashable<Value, Hashed>: Equatable, Hashable where Hashed: Hashable {
+    var value: Value
+    var transformed: Hashed
 
-    init(_ value: T, transform: (T) -> H) {
+    init(_ value: Value, transform: (Value) -> Hashed) {
         self.value = value
         self.transformed = transform(value)
     }
@@ -32,7 +32,7 @@ struct TransformedHashable<T, H>: Equatable, Hashable where H: Hashable {
         lhs.transformed == rhs.transformed
     }
 
-    subscript<V>(dynamicMember keyPath: KeyPath<T, V>) -> V {
+    subscript<Member>(dynamicMember keyPath: KeyPath<Value, Member>) -> Member {
         value[keyPath: keyPath]
     }
 }
