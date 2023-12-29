@@ -57,7 +57,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
         defer { try? client.syncShutdown() }
 
-        var newPackages = [PackageURL]()
+        var newPackages = UniqueCanonicalPackageURLs()
         var notAddedBecauseFork = 0
         for (idx, dep) in missing.enumerated() {
             if idx % 10 == 0 {
@@ -89,8 +89,9 @@ public struct CheckDependencies2: AsyncParsableCommand {
                 continue
             }
             // TODO: drop no products?
-            newPackages.append(resolved.appendingGitExtension())
-            print("✅ ADD (\(newPackages.count)):", resolved.appendingGitExtension())
+            if newPackages.insert(resolved.appendingGitExtension().canonicalPackageURL).inserted {
+                print("✅ ADD (\(newPackages.count)):", resolved.appendingGitExtension())
+            }
             if newPackages.count >= limit {
                 print("  ... limit reached.")
                 break
@@ -98,14 +99,15 @@ public struct CheckDependencies2: AsyncParsableCommand {
         }
 
         print("New packages:", newPackages.count)
-        for (idx, p) in newPackages.enumerated() {
+        for (idx, p) in newPackages.sorted(by: { $0.canonicalPath < $1.canonicalPath }).enumerated() {
             print("  ✅ ADD", idx, p)
         }
         print("Not added because they are forks:", notAddedBecauseFork)
 
         // merge with existing and sort result
         let input = allPackages.map { $0.packageURL }
-        let merged = newPackages.mergingWithExisting(urls: input)
+        let merged = Array(newPackages.map(\.value.packageURL))
+            .mergingWithExisting(urls: input)
             .sorted(by: { $0.lowercased() < $1.lowercased() })
 
         print("Total:", merged.count)
@@ -121,9 +123,16 @@ public struct CheckDependencies2: AsyncParsableCommand {
 typealias UniqueCanonicalPackageURLs = Set<TransformedHashable<CanonicalPackageURL, String>>
 
 
+#warning("add tests")
 extension UniqueCanonicalPackageURLs {
     func contains(_ member: CanonicalPackageURL) -> Bool {
         contains(.init(member, transform: \.canonicalPath))
+    }
+
+    @discardableResult
+    mutating func insert(_ newMember: CanonicalPackageURL) -> (inserted: Bool, memberAfterInsert: CanonicalPackageURL) {
+        let res = insert(.init(newMember, transform: \.canonicalPath))
+        return (res.inserted, res.memberAfterInsert.value)
     }
 }
 
