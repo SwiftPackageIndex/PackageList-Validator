@@ -124,15 +124,23 @@ extension Github {
     }
 
     static func fetchRepository(client: HTTPClient, url: PackageURL) async throws-> Repository {
+        try await fetchRepository(client: client, url: url, attempt: 0)
+    }
+
+    static func fetchRepository(client: HTTPClient, url: PackageURL, attempt: Int) async throws-> Repository {
+#warning("add test for retry")
+        guard attempt < 3 else { throw AppError.retryLimitExceeded }
         let apiURL = URL(string: "https://api.github.com/repos/\(url.owner)/\(url.repository)")!
         let key = Cache<Repository>.Key(string: apiURL.absoluteString)
-        if let cached = repositoryCache[key] {
-            return cached
-        }
+        if let cached = repositoryCache[key] { return cached }
         do {
             let repo = try await fetch(Repository.self, client: client, url: apiURL).get()
             repositoryCache[key] = repo
             return repo
+        } catch let AppError.rateLimited(until: retryDate) {
+            let delay = UInt64(retryDate.timeIntervalSinceNow)
+            try await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
+            return try await fetchRepository(client: client, url: url, attempt: attempt + 1)
         } catch let AppError.requestFailed(_, code) where code == 404 {
             throw AppError.repositoryNotFound(owner: url.owner, name: url.repository)
         }
