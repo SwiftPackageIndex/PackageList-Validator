@@ -57,6 +57,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
         defer { try? client.syncShutdown() }
 
         var newPackages = [PackageURL]()
+        var notAddedBecauseFork = 0
         for (idx, dep) in missing.enumerated() {
             if idx % 10 == 0 {
                 print("Progress:", idx, "/", missing.count)
@@ -79,6 +80,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
                 let repo = try await Current.fetchRepositoryAsync(client, resolved)
                 guard !repo.fork else {
                     print("  ... ⛔ fork")
+                    notAddedBecauseFork += 1
                     continue
                 }
             } catch {
@@ -95,6 +97,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
         }
 
         print("New packages:", newPackages.count)
+        print("Not added because they are forks:", notAddedBecauseFork)
 
         // merge with existing and sort result
         let input = allPackages.map { $0.packageURL }
