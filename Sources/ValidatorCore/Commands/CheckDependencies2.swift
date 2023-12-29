@@ -26,7 +26,8 @@ public struct CheckDependencies2: AsyncParsableCommand {
     var spiApiToken: String
 
     public func run() async throws {
-        print("check depdendencies 2")
+        let start = Date()
+        defer { print("Elapsed (/min):", Date().timeIntervalSince(start)/60) }
 
         // CheckDependencies
         // - expandDependencies([PackageURL])
@@ -97,6 +98,9 @@ public struct CheckDependencies2: AsyncParsableCommand {
         }
 
         print("New packages:", newPackages.count)
+        for (idx, p) in newPackages.enumerated() {
+            print("  ✅ ADD", idx, p)
+        }
         print("Not added because they are forks:", notAddedBecauseFork)
 
         // merge with existing and sort result
