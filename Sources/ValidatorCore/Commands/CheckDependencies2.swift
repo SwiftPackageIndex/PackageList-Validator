@@ -59,7 +59,9 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
         var newPackages = UniqueCanonicalPackageURLs()
         var notAddedBecauseFork = 0
-        for (idx, dep) in missing.enumerated() {
+        for (idx, dep) in missing
+            .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
+            .enumerated() {
             if idx % 10 == 0 {
                 print("Progress:", idx, "/", missing.count)
             }
@@ -99,8 +101,10 @@ public struct CheckDependencies2: AsyncParsableCommand {
         }
 
         print("New packages:", newPackages.count)
-        for (idx, p) in newPackages.sorted(by: { $0.canonicalPath < $1.canonicalPath }).enumerated() {
-            print("  ✅ ADD", idx, p)
+        for (idx, p) in newPackages
+            .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
+            .enumerated() {
+            print("  ✅ ADD", idx, p.packageURL)
         }
         print("Not added because they are forks:", notAddedBecauseFork)
 
