@@ -65,25 +65,29 @@ public struct CheckDependencies2: AsyncParsableCommand {
             print("Processing:", dep.packageURL, "...")
             guard let resolved = await Current.resolvePackageRedirectsAsync(dep.packageURL).url else {
                 // TODO: consider adding retry for some errors
-                print("  ... redirect resolution returned nil")
+                print("  ... ⛔ redirect resolution returned nil")
                 continue
             }
             if resolved.canonicalPackageURL.canonicalPath != dep.canonicalPath {
                 print("  ... redirected to:", resolved)
             }
             if allPackages.contains(resolved.canonicalPackageURL) {
-                print("  ... already indexed")
+                print("  ... ⛔ already indexed")
                 continue
             }
-            // drop forks
-            let repo = try await Current.fetchRepositoryAsync(client, resolved)
-            guard !repo.fork else {
-                print("  ... fork")
+            do {  // drop forks
+                let repo = try await Current.fetchRepositoryAsync(client, resolved)
+                guard !repo.fork else {
+                    print("  ... ⛔ fork")
+                    continue
+                }
+            } catch {
+                print("  ... ⛔ \(error)")
                 continue
             }
             // TODO: drop no products?
             newPackages.append(resolved.appendingGitExtension())
-            print("ADD (\(newPackages.count)):", resolved.appendingGitExtension())
+            print("✅ ADD (\(newPackages.count)):", resolved.appendingGitExtension())
             if newPackages.count >= limit {
                 print("  ... limit reached.")
                 break
