@@ -94,9 +94,13 @@ extension Github {
         struct Response: Decodable {
             var rate: RateLimit
         }
-        let url = URL(string: "https://api.github.com/rate_limit")!
-        return ValidatorCore.fetch(Response.self, client: client, url: url)
-            .map(\.rate)
+        let promise = client.eventLoopGroup.next().makePromise(of: RateLimit.self)
+        promise.completeWithTask {
+            let url = URL(string: "https://api.github.com/rate_limit")!
+            let res = try await fetch(Response.self, client: client, url: url)
+            return res.rate
+        }
+        return promise.futureResult
     }
 
 
@@ -108,7 +112,11 @@ extension Github {
         if let cached = repositoryCache[Cache.Key(string: url.absoluteString)] {
             return client.eventLoopGroup.next().makeSucceededFuture(cached)
         }
-        return ValidatorCore.fetch(Repository.self, client: client, url: url)
+        let promise = client.eventLoopGroup.next().makePromise(of: Repository.self)
+        promise.completeWithTask {
+            try await fetch(Repository.self, client: client, url: url)
+        }
+        return promise.futureResult
             .flatMapError { error in
                 let eventLoop = client.eventLoopGroup.next()
                 if case AppError.requestFailed(_, 404) = error {
