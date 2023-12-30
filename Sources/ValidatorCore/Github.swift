@@ -132,7 +132,7 @@ extension Github {
             }
     }
 
-    
+
     static func fetchRepository(client: HTTPClient, url: PackageURL) async throws-> Repository {
         try await fetchRepository(client: client, url: url, attempt: 0)
     }
@@ -177,6 +177,7 @@ extension Github {
         return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
     }
 
+    
     static func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) async throws -> T {
         let body = try await Current.fetch(client, url).get()
         do {
@@ -228,3 +229,8 @@ extension Github {
     }
 
 }
+
+
+#if os(Linux)
+let NSEC_PER_SEC = UInt64(1_000_000_000)
+#endif
