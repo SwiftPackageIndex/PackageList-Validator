@@ -16,12 +16,13 @@ import Foundation
 
 import AsyncHTTPClient
 import NIO
+import NIOHTTP1
 
 
 /// Github specific functionality
 enum Github {
 
-    struct Repository: Codable {
+    struct Repository: Codable, Equatable {
         let default_branch: String
         let fork: Bool
     }
@@ -94,7 +95,7 @@ extension Github {
             var rate: RateLimit
         }
         let url = URL(string: "https://api.github.com/rate_limit")!
-        return fetch(Response.self, client: client, url: url)
+        return ValidatorCore.fetch(Response.self, client: client, url: url)
             .map(\.rate)
     }
 
@@ -107,7 +108,7 @@ extension Github {
         if let cached = repositoryCache[Cache.Key(string: url.absoluteString)] {
             return client.eventLoopGroup.next().makeSucceededFuture(cached)
         }
-        return fetch(Repository.self, client: client, url: url)
+        return ValidatorCore.fetch(Repository.self, client: client, url: url)
             .flatMapError { error in
                 let eventLoop = client.eventLoopGroup.next()
                 if case AppError.requestFailed(_, 404) = error {
@@ -123,18 +124,19 @@ extension Github {
             }
     }
 
+    
     static func fetchRepository(client: HTTPClient, url: PackageURL) async throws-> Repository {
         try await fetchRepository(client: client, url: url, attempt: 0)
     }
 
+
     static func fetchRepository(client: HTTPClient, url: PackageURL, attempt: Int) async throws-> Repository {
-#warning("add test for retry")
         guard attempt < 3 else { throw AppError.retryLimitExceeded }
         let apiURL = URL(string: "https://api.github.com/repos/\(url.owner)/\(url.repository)")!
         let key = Cache<Repository>.Key(string: apiURL.absoluteString)
         if let cached = repositoryCache[key] { return cached }
         do {
-            let repo = try await fetch(Repository.self, client: client, url: apiURL).get()
+            let repo = try await fetch(Repository.self, client: client, url: apiURL)
             repositoryCache[key] = repo
             return repo
         } catch let AppError.rateLimited(until: retryDate) {
@@ -165,6 +167,56 @@ extension Github {
                 }
         }
         return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
+    }
+
+    static func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) async throws -> T {
+        let body = try await Current.fetch(client, url).get()
+        do {
+            return try JSONDecoder().decode(type, from: body)
+        } catch {
+            let json = body.getString(at: 0, length: body.readableBytes) ?? "(nil)"
+            throw AppError.decodingError(context: url.absoluteString,
+                                         underlyingError: error,
+                                         json: json)
+        }
+    }
+
+    static func fetch(client: HTTPClient, url: URL) -> EventLoopFuture<ByteBuffer> {
+        let eventLoop = client.eventLoopGroup.next()
+        guard let token = Current.githubToken() else {
+            return eventLoop.makeFailedFuture(AppError.githubTokenNotSet)
+        }
+        let headers = HTTPHeaders([
+            ("User-Agent", "SPI-Validator"),
+            ("Authorization", "Bearer \(token)")
+        ])
+        let rateLimitHeadroom = 20
+
+        do {
+            let request = try HTTPClient.Request(url: url, method: .GET, headers: headers)
+            return client.execute(request: request)
+                .flatMap { response in
+                    switch Github.rateLimitStatus(response) {
+                        case let .limited(until: reset):
+                            return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                        case let .ok(remaining: remaining, reset: reset) where remaining < rateLimitHeadroom:
+                            return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                        case .ok, .unknown:
+                            break
+                    }
+                    guard (200...299).contains(response.status.code) else {
+                        return eventLoop.makeFailedFuture(
+                            AppError.requestFailed(url, response.status.code)
+                        )
+                    }
+                    guard let body = response.body else {
+                        return eventLoop.makeFailedFuture(AppError.noData(url))
+                    }
+                    return eventLoop.makeSucceededFuture(body)
+                }
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
     }
 
 }

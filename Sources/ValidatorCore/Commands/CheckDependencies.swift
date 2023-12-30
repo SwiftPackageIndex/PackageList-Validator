@@ -266,6 +266,7 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
 }
 
 
+@available(*, deprecated)
 func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventLoopFuture<T> {
     let eventLoop = client.eventLoopGroup.next()
     guard let token = Current.githubToken() else {

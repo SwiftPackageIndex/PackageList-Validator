@@ -21,6 +21,7 @@ import NIO
 struct Environment {
     var decodeManifest: (_ url: Package.ManifestURL) throws -> Package
     var fileManager: FileManager
+    var fetch: (_ client: HTTPClient, _ url: URL) -> EventLoopFuture<ByteBuffer>
     var fetchRepository: (_ client: HTTPClient,
                           _ owner: String,
                           _ repository: String) -> EventLoopFuture<Github.Repository>
@@ -36,6 +37,7 @@ extension Environment {
     static let live: Self = .init(
         decodeManifest: { url in try Package.decode(from: url) },
         fileManager: .live,
+        fetch: Github.fetch(client:url:),
         fetchRepository: Github.fetchRepository(client:owner:repository:),
         fetchRepositoryAsync: Github.fetchRepository(client:url:),
         githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
@@ -47,6 +49,7 @@ extension Environment {
     static let mock: Self = .init(
         decodeManifest: { _ in fatalError("not implemented") },
         fileManager: .mock,
+        fetch: { client, _ in client.eventLoopGroup.next().makeFailedFuture(AppError.runtimeError("unimplemented")) },
         fetchRepository: { client, _, _ in
             client.eventLoopGroup.next().makeSucceededFuture(
                 Github.Repository(default_branch: "main", fork: false)) },
