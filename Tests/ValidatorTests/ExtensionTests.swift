@@ -52,6 +52,29 @@ final class ExtensionsTests: XCTestCase {
         XCTAssertEqual(missing.first?.canonicalPath, CanonicalPackageURL.p3.canonicalPath)
     }
 
+    func test_String_appendingGitExtension() throws {
+        XCTAssertEqual("".appendingGitExtension(), ".git")
+        XCTAssertEqual("foo".appendingGitExtension(), "foo.git")
+        XCTAssertEqual("foo.".appendingGitExtension(), "foo..git")
+        XCTAssertEqual("foo/".appendingGitExtension(), "foo.git")
+        XCTAssertEqual("foo/.git".appendingGitExtension(), "foo.git")
+        XCTAssertEqual("foo.git".appendingGitExtension(), "foo.git")
+        XCTAssertEqual("foo.Git".appendingGitExtension(), "foo.git")
+        XCTAssertEqual("foo.GIT".appendingGitExtension(), "foo.git")
+        XCTAssertEqual("foo.bar".appendingGitExtension(), "foo.bar.git")
+    }
+
+    func test_String_deletingGitExtension() throws {
+        XCTAssertEqual("foo.git".deletingGitExtension(), "foo")
+        XCTAssertEqual("foo..git".deletingGitExtension(), "foo.")
+        XCTAssertEqual("foo/.git".deletingGitExtension(), "foo")
+        XCTAssertEqual("foo/".deletingGitExtension(), "foo/")
+        XCTAssertEqual("foo".deletingGitExtension(), "foo")
+        XCTAssertEqual("foo.Git".deletingGitExtension(), "foo")
+        XCTAssertEqual("foo.GIT".deletingGitExtension(), "foo")
+        XCTAssertEqual("foo.bar.git".deletingGitExtension(), "foo.bar")
+    }
+
 }
 
 

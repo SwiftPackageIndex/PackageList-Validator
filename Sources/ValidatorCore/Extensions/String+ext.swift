@@ -15,21 +15,20 @@
 import Foundation
 
 
-#warning("add tests")
 extension String {
     func appendingGitExtension() -> Self {
-        let url = URL(string: trimmingCharacters(in: CharacterSet(charactersIn: "./")))!
-        if url.pathExtension.lowercased() == "git" {
-            return url.absoluteString.deletingGitExtension() + ".git"
+        let suffix = ".git"
+        if !lowercased().hasSuffix(suffix) {
+            return trimmingCharacters(in: CharacterSet(charactersIn: "/")) + suffix
         } else {
-            return url.appendingPathExtension("git").absoluteString
+            return deletingGitExtension() + suffix
         }
     }
 
     func deletingGitExtension() -> Self {
         let suffix = ".git"
         if lowercased().hasSuffix(suffix) {
-            return String(dropLast(suffix.count))
+            return String(dropLast(suffix.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         }
         return self
     }
