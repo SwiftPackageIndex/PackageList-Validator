@@ -1,3 +1,7 @@
+// Copyright Dave Verwer, Sven A. Schmidt, and other contributors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
@@ -124,34 +128,19 @@ public struct CheckDependencies2: AsyncParsableCommand {
 }
 
 
-typealias UniqueCanonicalPackageURLs = Set<TransformedHashable<CanonicalPackageURL, String>>
-
-
-#warning("add tests")
-extension UniqueCanonicalPackageURLs {
-    func contains(_ member: CanonicalPackageURL) -> Bool {
-        contains(.init(member, transform: \.canonicalPath))
-    }
-
-    @discardableResult
-    mutating func insert(_ newMember: CanonicalPackageURL) -> (inserted: Bool, memberAfterInsert: CanonicalPackageURL) {
-        let res = insert(.init(newMember, transform: \.canonicalPath))
-        return (res.inserted, res.memberAfterInsert.value)
-    }
-}
 
 
 extension [SwiftPackageIndexAPI.PackageRecord] {
     var allPackages: UniqueCanonicalPackageURLs {
         Set(
-            map { TransformedHashable($0.url, transform: \.canonicalPath) }
+            map { HashedCanonicalPackageURL($0.url) }
         )
     }
 
     var allDependencies: UniqueCanonicalPackageURLs {
         let deps = flatMap { $0.resolvedDependencies ?? [] }
         return Set(
-            deps.map { TransformedHashable($0, transform: \.canonicalPath) }
+            deps.map { HashedCanonicalPackageURL($0) }
         )
     }
 }
