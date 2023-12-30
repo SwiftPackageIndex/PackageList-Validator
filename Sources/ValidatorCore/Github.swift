@@ -18,6 +18,10 @@ import AsyncHTTPClient
 import NIO
 import NIOHTTP1
 
+#if os(Linux)
+import CDispatch // for NSEC_PER_SEC https://github.com/apple/swift-corelibs-libdispatch/issues/659
+#endif
+
 
 /// Github specific functionality
 enum Github {
@@ -177,7 +181,7 @@ extension Github {
         return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
     }
 
-    
+
     static func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) async throws -> T {
         let body = try await Current.fetch(client, url).get()
         do {
@@ -229,8 +233,3 @@ extension Github {
     }
 
 }
-
-
-#if os(Linux)
-let NSEC_PER_SEC = UInt64(1_000_000_000)
-#endif
