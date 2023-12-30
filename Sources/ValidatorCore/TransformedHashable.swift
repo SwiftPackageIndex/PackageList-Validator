@@ -13,7 +13,6 @@
 // limitations under the License.
 
 
-#warning("add test")
 @dynamicMemberLookup
 struct TransformedHashable<Value, Hashed>: Equatable, Hashable where Hashed: Hashable {
     var value: Value
