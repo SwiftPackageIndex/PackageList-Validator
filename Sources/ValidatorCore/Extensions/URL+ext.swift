@@ -15,20 +15,38 @@
 import Foundation
 
 
-#warning("add tests")
 extension URL {
     func appendingGitExtension() -> Self {
-        let url = URL(string: absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "./")))!
+        let url = URL(string: absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")))!
         if url.pathExtension.lowercased() == "git" {
             return url.deletingPathExtension().appendingPathExtension("git")
         } else {
-            return url.appendingPathExtension("git")
+            if url.lastPathComponent.lowercased() == ".git" { // turn foo/.git into foo.git
+                return URL(
+                    string: url.deletingLastPathComponent()
+                        .absoluteString
+                        .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                )!
+                .appendingPathExtension("git")
+            } else {
+                return url.appendingPathExtension("git")
+            }
         }
     }
 
     func deletingGitExtension() -> URL {
-        pathExtension == "git"
-            ? deletingPathExtension()
-            : self
+        if pathExtension.lowercased() == "git" {
+            return deletingPathExtension()
+        } else {
+            if lastPathComponent.lowercased() == ".git" { // turn foo/.git into foo
+                return URL(
+                    string: deletingLastPathComponent()
+                        .absoluteString
+                        .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                )!
+            } else {
+                return self
+            }
+        }
     }
 }

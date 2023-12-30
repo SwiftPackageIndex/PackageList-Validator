@@ -75,6 +75,28 @@ final class ExtensionsTests: XCTestCase {
         XCTAssertEqual("foo.bar.git".deletingGitExtension(), "foo.bar")
     }
 
+    func test_URL_appendingGitExtension() throws {
+        XCTAssertEqual(URL(string: "foo")!.appendingGitExtension().absoluteString, "foo.git")
+        XCTAssertEqual(URL(string: "foo.")!.appendingGitExtension().absoluteString, "foo..git")
+        XCTAssertEqual(URL(string: "foo/")!.appendingGitExtension().absoluteString, "foo.git")
+        XCTAssertEqual(URL(string: "foo/.git")!.appendingGitExtension().absoluteString, "foo.git")
+        XCTAssertEqual(URL(string: "foo.git")!.appendingGitExtension().absoluteString, "foo.git")
+        XCTAssertEqual(URL(string: "foo.Git")!.appendingGitExtension().absoluteString, "foo.git")
+        XCTAssertEqual(URL(string: "foo.GIT")!.appendingGitExtension().absoluteString, "foo.git")
+        XCTAssertEqual(URL(string: "foo.bar")!.appendingGitExtension().absoluteString, "foo.bar.git")
+    }
+
+    func test_URL_deletingGitExtension() throws {
+        XCTAssertEqual(URL(string: "foo.git")!.deletingGitExtension().absoluteString, "foo")
+        XCTAssertEqual(URL(string: "foo..git")!.deletingGitExtension().absoluteString, "foo.")
+        XCTAssertEqual(URL(string: "foo/.git")!.deletingGitExtension().absoluteString, "foo")
+        XCTAssertEqual(URL(string: "foo/")!.deletingGitExtension().absoluteString, "foo/")
+        XCTAssertEqual(URL(string: "foo")!.deletingGitExtension().absoluteString, "foo")
+        XCTAssertEqual(URL(string: "foo.Git")!.deletingGitExtension().absoluteString, "foo")
+        XCTAssertEqual(URL(string: "foo.GIT")!.deletingGitExtension().absoluteString, "foo")
+        XCTAssertEqual(URL(string: "foo.bar.git")!.deletingGitExtension().absoluteString, "foo.bar")
+    }
+
 }
 
 
