@@ -44,7 +44,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
         // fetch all dependencies
         let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
-        let records = try await api.fetchDependencies()
+        let records = try await Current.fetchDependencies(api)
         let allPackages = records.allPackages
         print("Total packages:", allPackages.count)
 
@@ -115,6 +115,9 @@ public struct CheckDependencies2: AsyncParsableCommand {
         print("Total:", merged.count)
 
 #warning("load and merge package file")
+        if let path = output {
+            try Current.fileManager.saveList(merged, path: path)
+        }
     }
 
     public init() { }
