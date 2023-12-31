@@ -25,12 +25,13 @@ final class CheckDependencies2Tests: XCTestCase {
     override func setUp() {
         super.setUp()
         check.apiBaseURL = "unused"
+        check.input = nil
         check.limit = .max
         check.spiApiToken = "unused"
         check.output = "unused"
     }
 
-    func test_basic() async throws {
+    func test_run_basic() async throws {
         // Input urls and api urls agree - we're up-to-date with reconciliation, i.e. the package list
         // we process in validation is the same package list that has been reconciled when we make the
         // dependencies API call.
@@ -62,6 +63,38 @@ final class CheckDependencies2Tests: XCTestCase {
         XCTAssertEqual(saved, [.p1, .p2, .p3])
     }
 
+    func test_run_list_newer() async throws {
+        // Input urls and api urls disagree - we're behind with reconciliation, i.e. the package list
+        // we process in validation is newer than the package list that has been reconciled when we
+        // make the dependencies API call.
+        // setup
+        Current = .mock
+        Current.fetchDependencies = { _ in [
+            .init(.p1, dependencies: []),
+            .init(.p2, dependencies: [.p3]),
+        ]}
+        var saved: [PackageURL]? = nil
+        Current.fileManager.createFile = { _, data, _ in
+            guard let data = data else {
+                XCTFail("data must not be nil")
+                return false
+            }
+            guard let list = try? JSONDecoder().decode([PackageURL].self, from: data) else {
+                XCTFail("decoding of output failed")
+                return false
+            }
+            saved = list
+            return true
+        }
+        check.packageUrls = [.p1, .p2, .p4]
+
+        // MUT
+        try await check.run()
+
+        // validate
+        XCTAssertEqual(saved, [.p1, .p2, .p3, .p4])
+    }
+
 }
 
 
@@ -69,7 +102,7 @@ private extension PackageURL {
     static let p1 = PackageURL(argument: "https://github.com/org/1.git")!
     static let p2 = PackageURL(argument: "https://github.com/org/2.git")!
     static let p3 = PackageURL(argument: "https://github.com/org/3.git")!
-//    static let p4 = PackageURL(argument: "https://github.com/org/4")!
+    static let p4 = PackageURL(argument: "https://github.com/org/4.git")!
 }
 
 private extension CanonicalPackageURL {

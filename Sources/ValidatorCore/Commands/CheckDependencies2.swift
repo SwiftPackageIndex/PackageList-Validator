@@ -110,11 +110,11 @@ public struct CheckDependencies2: AsyncParsableCommand {
         let input = allPackages.map { $0.packageURL }
         let merged = Array(newPackages.map(\.value.packageURL))
             .mergingWithExisting(urls: input)
+            .mergingWithExisting(urls: try inputSource.packageURLs())
             .sorted(by: { $0.lowercased() < $1.lowercased() })
 
         print("Total:", merged.count)
 
-#warning("load and merge package file")
         if let path = output {
             try Current.fileManager.saveList(merged, path: path)
         }
