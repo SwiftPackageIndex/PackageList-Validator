@@ -23,8 +23,17 @@ public struct CheckDependencies2: AsyncParsableCommand {
     @Option(name: .long)
     var apiBaseURL: String = "https://swiftpackageindex.com"
 
+    @Option(name: .shortAndLong, help: "read input URLs from file")
+    var input: String?
+
     @Option(name: .shortAndLong)
     var limit: Int = .max
+
+    @Option(name: .shortAndLong, help: "save changes to output file")
+    var output: String?
+
+    @Argument(help: "package URLs to check")
+    var packageUrls: [PackageURL] = []
 
     @Option(name: .long)
     var spiApiToken: String
@@ -33,24 +42,9 @@ public struct CheckDependencies2: AsyncParsableCommand {
         let start = Date()
         defer { print("Elapsed (/min):", Date().timeIntervalSince(start)/60) }
 
-        // CheckDependencies
-        // - expandDependencies([PackageURL])
-        //   - flatMap
-        //     - findDependencies(PackageURL)
-        //     - get package manifest
-        //     - decode manifest
-        //     - package dump
-        //     - get dependencies
-        //   - resolvePackageRedirects([PackageURL])
-        //   - dropForks([PackageURL])
-        //   - dropNoProducts([PackageURL])  -- re-consider this
-        //   - mergeWithExisting([PackageURL])
-        //   - sort
-        // - save
-
         // fetch all dependencies
         let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
-        let records = try await api.fetchDependencies()
+        let records = try await Current.fetchDependencies(api)
         let allPackages = records.allPackages
         print("Total packages:", allPackages.count)
 
@@ -116,17 +110,51 @@ public struct CheckDependencies2: AsyncParsableCommand {
         let input = allPackages.map { $0.packageURL }
         let merged = Array(newPackages.map(\.value.packageURL))
             .mergingWithExisting(urls: input)
+            .mergingWithExisting(urls: try inputSource.packageURLs())
             .sorted(by: { $0.lowercased() < $1.lowercased() })
 
         print("Total:", merged.count)
 
-#warning("load and merge package file")
+        if let path = output {
+            try Current.fileManager.saveList(merged, path: path)
+        }
     }
 
     public init() { }
 
 }
 
+
+extension CheckDependencies2 {
+    var inputSource: InputSource {
+        switch (input, packageUrls.count) {
+            case (.some(let fname), 0):
+                return .file(fname)
+            case (.none, 1...):
+                return .packageURLs(packageUrls)
+            default:
+                return .invalid
+        }
+    }
+
+    enum InputSource {
+        case file(String)
+        case invalid
+        case packageURLs([PackageURL])
+
+        func packageURLs() throws -> [PackageURL] {
+            switch self {
+                case .file(let path):
+                    let fileURL = URL(fileURLWithPath: path)
+                    return try JSONDecoder().decode([PackageURL].self, from: Data(contentsOf: fileURL))
+                case .invalid:
+                    throw AppError.runtimeError("invalid input source")
+                case .packageURLs(let urls):
+                    return urls
+            }
+        }
+    }
+}
 
 
 
