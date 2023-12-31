@@ -20,11 +20,21 @@ import CanonicalPackageURL
 
 
 final class CheckDependencies2Tests: XCTestCase {
+    var check = CheckDependencies2()
+
+    override func setUp() {
+        super.setUp()
+        check.apiBaseURL = "unused"
+        check.limit = .max
+        check.spiApiToken = "unused"
+        check.output = "unused"
+    }
 
     func test_basic() async throws {
         // Input urls and api urls agree - we're up-to-date with reconciliation, i.e. the package list
         // we process in validation is the same package list that has been reconciled when we make the
         // dependencies API call.
+        // setup
         Current = .mock
         Current.fetchDependencies = { _ in [
             .init(.p1, dependencies: []),
@@ -43,12 +53,6 @@ final class CheckDependencies2Tests: XCTestCase {
             saved = list
             return true
         }
-
-        var check = CheckDependencies2()
-        check.apiBaseURL = "unused"
-        check.limit = .max
-        check.spiApiToken = "unused"
-        check.output = "unused"
         check.packageUrls = [.p1, .p2]
 
         // MUT
