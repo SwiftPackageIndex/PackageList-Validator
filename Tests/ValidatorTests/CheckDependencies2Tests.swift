@@ -109,8 +109,6 @@ private extension CanonicalPackageURL {
     static let p1 = CanonicalPackageURL(prefix: .gitAt, hostname: "github.com", path: "org/1")
     static let p2 = CanonicalPackageURL(prefix: .http, hostname: "github.com", path: "org/2")
     static let p3 = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/3")
-//    static let p4 = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/4")
-//    static let p5 = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/5")
 }
 
 private extension SwiftPackageIndexAPI.PackageRecord {

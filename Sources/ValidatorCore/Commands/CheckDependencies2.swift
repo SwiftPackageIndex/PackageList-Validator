@@ -157,7 +157,6 @@ extension CheckDependencies2 {
 }
 
 
-
 extension [SwiftPackageIndexAPI.PackageRecord] {
     var allPackages: UniqueCanonicalPackageURLs {
         Set(
