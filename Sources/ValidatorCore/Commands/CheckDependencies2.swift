@@ -23,8 +23,17 @@ public struct CheckDependencies2: AsyncParsableCommand {
     @Option(name: .long)
     var apiBaseURL: String = "https://swiftpackageindex.com"
 
+    @Option(name: .shortAndLong, help: "read input URLs from file")
+    var input: String?
+
     @Option(name: .shortAndLong)
     var limit: Int = .max
+
+    @Option(name: .shortAndLong, help: "save changes to output file")
+    var output: String?
+
+    @Argument(help: "package URLs to check")
+    var packageUrls: [PackageURL] = []
 
     @Option(name: .long)
     var spiApiToken: String
@@ -32,21 +41,6 @@ public struct CheckDependencies2: AsyncParsableCommand {
     public func run() async throws {
         let start = Date()
         defer { print("Elapsed (/min):", Date().timeIntervalSince(start)/60) }
-
-        // CheckDependencies
-        // - expandDependencies([PackageURL])
-        //   - flatMap
-        //     - findDependencies(PackageURL)
-        //     - get package manifest
-        //     - decode manifest
-        //     - package dump
-        //     - get dependencies
-        //   - resolvePackageRedirects([PackageURL])
-        //   - dropForks([PackageURL])
-        //   - dropNoProducts([PackageURL])  -- re-consider this
-        //   - mergeWithExisting([PackageURL])
-        //   - sort
-        // - save
 
         // fetch all dependencies
         let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
@@ -127,6 +121,37 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
 }
 
+
+extension CheckDependencies2 {
+    var inputSource: InputSource {
+        switch (input, packageUrls.count) {
+            case (.some(let fname), 0):
+                return .file(fname)
+            case (.none, 1...):
+                return .packageURLs(packageUrls)
+            default:
+                return .invalid
+        }
+    }
+
+    enum InputSource {
+        case file(String)
+        case invalid
+        case packageURLs([PackageURL])
+
+        func packageURLs() throws -> [PackageURL] {
+            switch self {
+                case .file(let path):
+                    let fileURL = URL(fileURLWithPath: path)
+                    return try JSONDecoder().decode([PackageURL].self, from: Data(contentsOf: fileURL))
+                case .invalid:
+                    throw AppError.runtimeError("invalid input source")
+                case .packageURLs(let urls):
+                    return urls
+            }
+        }
+    }
+}
 
 
 
