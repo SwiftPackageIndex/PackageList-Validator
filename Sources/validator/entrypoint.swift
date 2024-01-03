@@ -12,20 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import Foundation
+import ValidatorCore
 
 
-enum AppError: Error {
-    case decodingError(context: String, underlyingError: Error, json: String)
-    case dumpPackageError(String)
-    case githubTokenNotSet
-    case invalidPackage(url: PackageURL)
-    case invalidDenyListUrl(string: String)
-    case ioError(String)
-    case noData(URL)
-    case rateLimited(until: Date)
-    case repositoryNotFound(owner: String, name: String)
-    case requestFailed(URL, UInt)
-    case retryLimitExceeded
-    case runtimeError(String)
+@main
+struct Main {
+    static func main() async throws {
+        await Validator.main()
+    }
 }

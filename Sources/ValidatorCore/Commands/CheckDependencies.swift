@@ -195,7 +195,7 @@ func findDependencies(packageURL: PackageURL,
                       retries: Int) throws -> [PackageURL] {
     try Retry.attempt("Finding dependencies", retries: retries) {
         do {
-            let client = HTTPClient(eventLoopGroupProvider: .createNew)
+            let client = HTTPClient(eventLoopGroupProvider: .singleton)
             defer { try? client.syncShutdown() }
             return try findDependencies(client: client, url: packageURL).wait()
         } catch AppError.rateLimited(until: let reset) where waitIfRateLimited {
@@ -263,49 +263,4 @@ func findDependencies(client: HTTPClient, url: PackageURL) throws -> EventLoopFu
             fflush(stdout)
             return urls
         }
-}
-
-
-func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) -> EventLoopFuture<T> {
-    let eventLoop = client.eventLoopGroup.next()
-    let headers = HTTPHeaders([
-        ("User-Agent", "SPI-Validator"),
-        Current.githubToken().map { ("Authorization", "Bearer \($0)") }
-    ].compactMap({ $0 }))
-    let rateLimitHeadroom = 20
-
-    do {
-        let request = try HTTPClient.Request(url: url, method: .GET, headers: headers)
-        return client.execute(request: request)
-            .flatMap { response in
-                switch Github.rateLimitStatus(response) {
-                    case let .limited(until: reset):
-                        return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
-                    case let .ok(remaining: remaining, reset: reset) where remaining < rateLimitHeadroom:
-                        return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
-                    case .ok, .unknown:
-                        break
-                }
-                guard (200...299).contains(response.status.code) else {
-                    return eventLoop.makeFailedFuture(
-                        AppError.requestFailed(url, response.status.code)
-                    )
-                }
-                guard let body = response.body else {
-                    return eventLoop.makeFailedFuture(AppError.noData(url))
-                }
-                do {
-                    let content = try JSONDecoder().decode(type, from: body)
-                    return eventLoop.makeSucceededFuture(content)
-                } catch {
-                    let json = body.getString(at: 0, length: body.readableBytes) ?? "(nil)"
-                    return eventLoop.makeFailedFuture(
-                        AppError.decodingError(context: url.absoluteString,
-                                               underlyingError: error,
-                                               json: json))
-                }
-            }
-    } catch {
-        return eventLoop.makeFailedFuture(error)
-    }
 }

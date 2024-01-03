@@ -110,7 +110,7 @@ extension Validator {
             let verbose = verbose
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
-            let httpClient = HTTPClient(eventLoopGroupProvider: .createNew)
+            let httpClient = HTTPClient(eventLoopGroupProvider: .singleton)
             defer { try? httpClient.syncShutdown() }
 
             let offset = min(offset, inputURLs.count - 1)

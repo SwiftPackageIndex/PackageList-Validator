@@ -19,6 +19,10 @@ struct Cache<T: Codable> {
     struct Key: Codable, Hashable, CustomStringConvertible {
         let string: String
 
+        init(string: String) {
+            self.string = string.lowercased()
+        }
+
         var description: String { string }
     }
 

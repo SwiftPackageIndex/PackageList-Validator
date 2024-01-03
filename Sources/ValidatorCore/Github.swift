@@ -12,15 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import AsyncHTTPClient
 import Foundation
+
+import AsyncHTTPClient
 import NIO
+import NIOHTTP1
+
+#if os(Linux)
+import CDispatch // for NSEC_PER_SEC https://github.com/apple/swift-corelibs-libdispatch/issues/659
+#endif
 
 
 /// Github specific functionality
 enum Github {
 
-    struct Repository: Codable {
+    struct Repository: Codable, Equatable {
         let default_branch: String
         let fork: Bool
     }
@@ -92,9 +98,13 @@ extension Github {
         struct Response: Decodable {
             var rate: RateLimit
         }
-        let url = URL(string: "https://api.github.com/rate_limit")!
-        return fetch(Response.self, client: client, url: url)
-            .map(\.rate)
+        let promise = client.eventLoopGroup.next().makePromise(of: RateLimit.self)
+        promise.completeWithTask {
+            let url = URL(string: "https://api.github.com/rate_limit")!
+            let res = try await fetch(Response.self, client: client, url: url)
+            return res.rate
+        }
+        return promise.futureResult
     }
 
 
@@ -106,7 +116,11 @@ extension Github {
         if let cached = repositoryCache[Cache.Key(string: url.absoluteString)] {
             return client.eventLoopGroup.next().makeSucceededFuture(cached)
         }
-        return fetch(Repository.self, client: client, url: url)
+        let promise = client.eventLoopGroup.next().makePromise(of: Repository.self)
+        promise.completeWithTask {
+            try await fetch(Repository.self, client: client, url: url)
+        }
+        return promise.futureResult
             .flatMapError { error in
                 let eventLoop = client.eventLoopGroup.next()
                 if case AppError.requestFailed(_, 404) = error {
@@ -120,6 +134,30 @@ extension Github {
                 repositoryCache[Cache.Key(string: url.absoluteString)] = repo
                 return repo
             }
+    }
+
+
+    static func fetchRepository(client: HTTPClient, url: PackageURL) async throws-> Repository {
+        try await fetchRepository(client: client, url: url, attempt: 0)
+    }
+
+
+    static func fetchRepository(client: HTTPClient, url: PackageURL, attempt: Int) async throws-> Repository {
+        guard attempt < 3 else { throw AppError.retryLimitExceeded }
+        let apiURL = URL(string: "https://api.github.com/repos/\(url.owner)/\(url.repository)")!
+        let key = Cache<Repository>.Key(string: apiURL.absoluteString)
+        if let cached = repositoryCache[key] { return cached }
+        do {
+            let repo = try await fetch(Repository.self, client: client, url: apiURL)
+            repositoryCache[key] = repo
+            return repo
+        } catch let AppError.rateLimited(until: retryDate) {
+            let delay = UInt64(retryDate.timeIntervalSinceNow)
+            try await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
+            return try await fetchRepository(client: client, url: url, attempt: attempt + 1)
+        } catch let AppError.requestFailed(_, code) where code == 404 {
+            throw AppError.repositoryNotFound(owner: url.owner, name: url.repository)
+        }
     }
 
 
@@ -141,6 +179,57 @@ extension Github {
                 }
         }
         return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
+    }
+
+
+    static func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) async throws -> T {
+        let body = try await Current.fetch(client, url).get()
+        do {
+            return try JSONDecoder().decode(type, from: body)
+        } catch {
+            let json = body.getString(at: 0, length: body.readableBytes) ?? "(nil)"
+            throw AppError.decodingError(context: url.absoluteString,
+                                         underlyingError: error,
+                                         json: json)
+        }
+    }
+
+    static func fetch(client: HTTPClient, url: URL) -> EventLoopFuture<ByteBuffer> {
+        let eventLoop = client.eventLoopGroup.next()
+        guard let token = Current.githubToken() else {
+            return eventLoop.makeFailedFuture(AppError.githubTokenNotSet)
+        }
+        let headers = HTTPHeaders([
+            ("User-Agent", "SPI-Validator"),
+            ("Authorization", "Bearer \(token)")
+        ])
+        let rateLimitHeadroom = 20
+
+        do {
+            let request = try HTTPClient.Request(url: url, method: .GET, headers: headers)
+            return client.execute(request: request)
+                .flatMap { response in
+                    switch Github.rateLimitStatus(response) {
+                        case let .limited(until: reset):
+                            return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                        case let .ok(remaining: remaining, reset: reset) where remaining < rateLimitHeadroom:
+                            return eventLoop.makeFailedFuture(AppError.rateLimited(until: reset))
+                        case .ok, .unknown:
+                            break
+                    }
+                    guard (200...299).contains(response.status.code) else {
+                        return eventLoop.makeFailedFuture(
+                            AppError.requestFailed(url, response.status.code)
+                        )
+                    }
+                    guard let body = response.body else {
+                        return eventLoop.makeFailedFuture(AppError.noData(url))
+                    }
+                    return eventLoop.makeSucceededFuture(body)
+                }
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
     }
 
 }

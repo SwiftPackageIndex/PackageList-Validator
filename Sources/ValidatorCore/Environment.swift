@@ -12,19 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import AsyncHTTPClient
 import Foundation
+
+import AsyncHTTPClient
 import NIO
 
 
 struct Environment {
     var decodeManifest: (_ url: Package.ManifestURL) throws -> Package
     var fileManager: FileManager
+    var fetch: (_ client: HTTPClient, _ url: URL) -> EventLoopFuture<ByteBuffer>
+    var fetchDependencies: (_ api: SwiftPackageIndexAPI) async throws -> [SwiftPackageIndexAPI.PackageRecord]
     var fetchRepository: (_ client: HTTPClient,
                           _ owner: String,
                           _ repository: String) -> EventLoopFuture<Github.Repository>
+    var fetchRepositoryAsync: (_ client: HTTPClient, _ url: PackageURL) async throws -> Github.Repository
     var githubToken: () -> String?
     var resolvePackageRedirects: (EventLoop, PackageURL) -> EventLoopFuture<Redirect>
+    var resolvePackageRedirectsAsync: (PackageURL) async -> Redirect
     var shell: Shell
 }
 
@@ -33,27 +38,30 @@ extension Environment {
     static let live: Self = .init(
         decodeManifest: { url in try Package.decode(from: url) },
         fileManager: .live,
-        fetchRepository: { client, owner, repository in
-            Github.fetchRepository(client: client,
-                                   owner: owner,
-                                   repository: repository) },
+        fetch: Github.fetch(client:url:),
+        fetchDependencies: { try await $0.fetchDependencies() },
+        fetchRepository: Github.fetchRepository(client:owner:repository:),
+        fetchRepositoryAsync: Github.fetchRepository(client:url:),
         githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
-        resolvePackageRedirects: { eventLoop, url in
-            resolveRedirects(eventLoop: eventLoop, for: url)
-        },
+        resolvePackageRedirects: resolveRedirects(eventLoop:for:),
+        resolvePackageRedirectsAsync: resolveRedirects(for:),
         shell: .live
     )
 
     static let mock: Self = .init(
         decodeManifest: { _ in fatalError("not implemented") },
         fileManager: .mock,
+        fetch: { client, _ in client.eventLoopGroup.next().makeFailedFuture(AppError.runtimeError("unimplemented")) },
+        fetchDependencies: { _ in [] },
         fetchRepository: { client, _, _ in
             client.eventLoopGroup.next().makeSucceededFuture(
                 Github.Repository(default_branch: "main", fork: false)) },
+        fetchRepositoryAsync: { _, _ in .init(default_branch: "main", fork: false) },
         githubToken: { nil },
         resolvePackageRedirects: { eventLoop, url in
             eventLoop.makeSucceededFuture(.initial(url))
         },
+        resolvePackageRedirectsAsync: { .initial($0) },
         shell: .mock
     )
 }

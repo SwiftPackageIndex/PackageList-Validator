@@ -12,6 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import ValidatorCore
 
-Validator.main()
+@dynamicMemberLookup
+struct TransformedHashable<Value, Hashed>: Equatable, Hashable where Hashed: Hashable {
+    var value: Value
+    var transformed: Hashed
+
+    init(_ value: Value, transform: (Value) -> Hashed) {
+        self.value = value
+        self.transformed = transform(value)
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(transformed)
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.transformed == rhs.transformed
+    }
+
+    subscript<Member>(dynamicMember keyPath: KeyPath<Value, Member>) -> Member {
+        value[keyPath: keyPath]
+    }
+}

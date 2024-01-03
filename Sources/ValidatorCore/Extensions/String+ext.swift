@@ -12,11 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
+
 extension String {
-    func deletingGitExtension() -> String {
+    func appendingGitExtension() -> Self {
+        let suffix = ".git"
+        if !lowercased().hasSuffix(suffix) {
+            return trimmingCharacters(in: CharacterSet(charactersIn: "/")) + suffix
+        } else {
+            return deletingGitExtension() + suffix
+        }
+    }
+
+    func deletingGitExtension() -> Self {
         let suffix = ".git"
         if lowercased().hasSuffix(suffix) {
-            return String(dropLast(suffix.count))
+            return String(dropLast(suffix.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         }
         return self
     }
