@@ -56,7 +56,6 @@ public struct CheckDependencies2: AsyncParsableCommand {
         defer { try? client.syncShutdown() }
 
         var newPackages = UniqueCanonicalPackageURLs()
-        var notAddedBecauseFork = 0
         for (idx, dep) in missing
             .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
             .enumerated() {
@@ -77,18 +76,6 @@ public struct CheckDependencies2: AsyncParsableCommand {
                 print("  ... ⛔ already indexed")
                 continue
             }
-            do {  // drop forks
-                let repo = try await Current.fetchRepositoryAsync(client, resolved)
-                guard !repo.fork else {
-                    print("  ... ⛔ fork")
-                    notAddedBecauseFork += 1
-                    continue
-                }
-            } catch {
-                print("  ... ⛔ \(error)")
-                continue
-            }
-            // TODO: drop no products?
             if newPackages.insert(resolved.appendingGitExtension().canonicalPackageURL).inserted {
                 print("✅ ADD (\(newPackages.count)):", resolved.appendingGitExtension())
             }
@@ -104,7 +91,6 @@ public struct CheckDependencies2: AsyncParsableCommand {
             .enumerated() {
             print("  ✅ ADD", idx, p.packageURL)
         }
-        print("Not added because they are forks:", notAddedBecauseFork)
 
         // merge with existing and sort result
         let input = allPackages.map { $0.packageURL }
