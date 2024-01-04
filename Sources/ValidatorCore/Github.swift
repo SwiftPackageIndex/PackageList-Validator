@@ -27,8 +27,21 @@ import CDispatch // for NSEC_PER_SEC https://github.com/apple/swift-corelibs-lib
 enum Github {
 
     struct Repository: Codable, Equatable {
-        let default_branch: String
-        let fork: Bool
+        var defaultBranch: String
+        var fork: Bool
+        var name: String
+        var owner: Owner
+
+        struct Owner: Codable, Equatable {
+            var login: String
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case defaultBranch = "default_branch"
+            case fork
+            case name
+            case owner
+        }
     }
 
     static func packageList() throws -> [PackageURL] {

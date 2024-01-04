@@ -55,8 +55,12 @@ extension Environment {
         fetchDependencies: { _ in [] },
         fetchRepository: { client, _, _ in
             client.eventLoopGroup.next().makeSucceededFuture(
-                Github.Repository(default_branch: "main", fork: false)) },
-        fetchRepositoryAsync: { _, _ in .init(default_branch: "main", fork: false) },
+                Github.Repository(defaultBranch: "main", fork: false, name: "bar", owner: .init(login: "foo"))
+            )
+        },
+        fetchRepositoryAsync: { _, _ in
+            .init(defaultBranch: "main", fork: false, name: "bar", owner: .init(login: "foo"))
+        },
         githubToken: { nil },
         resolvePackageRedirects: { eventLoop, url in
             eventLoop.makeSucceededFuture(.initial(url))

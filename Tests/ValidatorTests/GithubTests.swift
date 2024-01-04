@@ -25,7 +25,7 @@ final class GithubTests: XCTestCase {
         // setup
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
         defer { try? client.syncShutdown() }
-        let repo = Github.Repository(default_branch: "main", fork: false)
+        let repo = Github.Repository(defaultBranch: "main", fork: false, name: "bar", owner: .init(login: "foo"))
         var calls = 0
         Current.fetch = { client, _ in
             calls += 1
