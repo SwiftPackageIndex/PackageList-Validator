@@ -23,7 +23,7 @@ struct Environment {
     var fileManager: FileManager
     var fetch: (_ client: HTTPClient, _ url: URL) -> EventLoopFuture<ByteBuffer>
     var fetchDependencies: (_ api: SwiftPackageIndexAPI) async throws -> [SwiftPackageIndexAPI.PackageRecord]
-    var fetchRepositoryAsync: (_ client: HTTPClient, _ url: PackageURL) async throws -> Github.Repository
+    var fetchRepository: (_ client: HTTPClient, _ url: PackageURL) async throws -> Github.Repository
     var githubToken: () -> String?
     var resolvePackageRedirects: (EventLoop, PackageURL) -> EventLoopFuture<Redirect>
     var resolvePackageRedirectsAsync: (PackageURL) async -> Redirect
@@ -37,7 +37,7 @@ extension Environment {
         fileManager: .live,
         fetch: Github.fetch(client:url:),
         fetchDependencies: { try await $0.fetchDependencies() },
-        fetchRepositoryAsync: Github.fetchRepository(client:url:),
+        fetchRepository: Github.fetchRepository(client:url:),
         githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
         resolvePackageRedirects: resolveRedirects(eventLoop:for:),
         resolvePackageRedirectsAsync: resolveRedirects(for:),
@@ -49,7 +49,7 @@ extension Environment {
         fileManager: .mock,
         fetch: { client, _ in client.eventLoopGroup.next().makeFailedFuture(AppError.runtimeError("unimplemented")) },
         fetchDependencies: { _ in [] },
-        fetchRepositoryAsync: { _, _ in .init(defaultBranch: "main", owner: "foo", name: "bar") },
+        fetchRepository: { _, _ in .init(defaultBranch: "main", owner: "foo", name: "bar") },
         githubToken: { nil },
         resolvePackageRedirects: { eventLoop, url in
             eventLoop.makeSucceededFuture(.initial(url))

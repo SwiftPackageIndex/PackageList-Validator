@@ -57,7 +57,7 @@ final class CheckDependenciesTests: XCTestCase {
             saved = list
             return true
         }
-        Current.fetchRepositoryAsync = { _, url in
+        Current.fetchRepository = { _, url in
             if url == PackageURL.p3 {
                 return .init(defaultBranch: "main", owner: "org", name: "3")
             } else {
@@ -115,7 +115,7 @@ final class CheckDependenciesTests: XCTestCase {
             saved = list
             return true
         }
-        Current.fetchRepositoryAsync = { _, url in
+        Current.fetchRepository = { _, url in
             if url == PackageURL.p3 {
                 return .init(defaultBranch: "main", owner: "org", name: "3")
             } else {
@@ -163,7 +163,7 @@ final class CheckDependenciesTests: XCTestCase {
             saved = list
             return true
         }
-        Current.fetchRepositoryAsync = { _, url in
+        Current.fetchRepository = { _, url in
             if url == PackageURL.p3 {
                 return .init(defaultBranch: "main", owner: "org", name: "3")
             } else {
