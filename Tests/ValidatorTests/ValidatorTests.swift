@@ -75,21 +75,6 @@ final class ValidatorTests: XCTestCase {
         }
     }
 
-    func test_getManifestURL_deprecated() throws {
-        // setup
-        let pkgURL = PackageURL(argument: "https://github.com/foo/bar")!
-        let client = HTTPClient(eventLoopGroupProvider: .singleton)
-        defer { try? client.syncShutdown() }
-
-        // MUT
-        let url = try Package.getManifestURL(client: client,
-                                             packageURL: pkgURL).wait()
-
-        // validate
-        XCTAssertEqual(url,
-                       .init("https://raw.githubusercontent.com/foo/bar/main/Package.swift"))
-    }
-
     func test_getManifestURL() async throws {
         // setup
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
