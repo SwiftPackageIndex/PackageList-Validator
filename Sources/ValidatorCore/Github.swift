@@ -134,32 +134,6 @@ extension Github {
     static var repositoryCache = Cache<Repository>()
 
 
-    static func fetchRepository(client: HTTPClient, owner: String, repository: String) -> EventLoopFuture<Repository> {
-        let url = URL(string: "https://api.github.com/repos/\(owner)/\(repository)")!
-        if let cached = repositoryCache[Cache.Key(string: url.absoluteString)] {
-            return client.eventLoopGroup.next().makeSucceededFuture(cached)
-        }
-        let promise = client.eventLoopGroup.next().makePromise(of: Repository.self)
-        promise.completeWithTask {
-            try await fetch(Repository.self, client: client, url: url)
-        }
-        return promise.futureResult
-            .flatMapError { error in
-                let eventLoop = client.eventLoopGroup.next()
-                if case AppError.requestFailed(_, 404) = error {
-                    return eventLoop.makeFailedFuture(
-                        AppError.repositoryNotFound(owner: owner, name: repository)
-                    )
-                }
-                return eventLoop.makeFailedFuture(error)
-            }
-            .map { repo in
-                repositoryCache[Cache.Key(string: url.absoluteString)] = repo
-                return repo
-            }
-    }
-
-
     static func fetchRepository(client: HTTPClient, url: PackageURL) async throws-> Repository {
         try await fetchRepository(client: client, url: url, attempt: 0)
     }
@@ -181,27 +155,6 @@ extension Github {
         } catch let AppError.requestFailed(_, code) where code == 404 {
             throw AppError.repositoryNotFound(owner: url.owner, name: url.repository)
         }
-    }
-
-
-    /// Fetch repositories for a collection of package urls. Repository is `nil` for package urls that are not found (404).
-    /// - Parameters:
-    ///   - client: http client
-    ///   - urls: list of package urls
-    /// - Returns: list of `(PackageURL, Repository?)` pairs
-    static func fetchRepositories(client: HTTPClient, urls: [PackageURL]) -> EventLoopFuture<[(PackageURL, Repository?)]> {
-        let req: [EventLoopFuture<(PackageURL, Repository?)>] = urls.map { url -> EventLoopFuture<(PackageURL, Repository?)> in
-            Current.fetchRepository(client, url.owner, url.repository)
-                .map { (url, $0) }
-                .flatMapError { error -> EventLoopFuture<(PackageURL, Repository?)> in
-                    // convert 'repository not found' into nil value
-                    if case AppError.repositoryNotFound = error {
-                        return client.eventLoopGroup.next().makeSucceededFuture((url, nil))
-                    }
-                    return client.eventLoopGroup.next().makeFailedFuture(error)
-                }
-        }
-        return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
     }
 
 
