@@ -42,6 +42,15 @@ enum Github {
             case name
             case owner
         }
+
+        init(defaultBranch: String, fork: Bool = false, owner: String, name: String) {
+            self.defaultBranch = defaultBranch
+            self.fork = fork
+            self.name = name
+            self.owner = .init(login: owner)
+        }
+
+        var path: String { "\(owner.login)/\(name)" }
     }
 
     static func packageList() throws -> [PackageURL] {
@@ -192,6 +201,28 @@ extension Github {
                 }
         }
         return EventLoopFuture.whenAllSucceed(req, on: client.eventLoopGroup.next())
+    }
+
+
+    static func listRepositoryFilePaths(client: HTTPClient, repository: Repository) async throws -> [String] {
+        let apiURL = URL( string: "https://api.github.com/repos/\(repository.path)/git/trees/\(repository.defaultBranch)" )!
+        struct Response: Decodable {
+            var tree: [File]
+
+            struct File: Decodable {
+                var type: FileType
+                var path: String
+
+                enum FileType: String, Decodable {
+                    case blob
+                    case tree
+                }
+            }
+        }
+        return try await fetch(Response.self, client: client, url: apiURL)
+            .tree
+            .filter{ $0.type == .blob }
+            .map(\.path)
     }
 
 

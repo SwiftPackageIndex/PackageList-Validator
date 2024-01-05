@@ -54,13 +54,10 @@ extension Environment {
         fetch: { client, _ in client.eventLoopGroup.next().makeFailedFuture(AppError.runtimeError("unimplemented")) },
         fetchDependencies: { _ in [] },
         fetchRepository: { client, _, _ in
-            client.eventLoopGroup.next().makeSucceededFuture(
-                Github.Repository(defaultBranch: "main", fork: false, name: "bar", owner: .init(login: "foo"))
-            )
+            client.eventLoopGroup.next()
+                .makeSucceededFuture( Github.Repository(defaultBranch: "main", owner: "foo", name: "bar") )
         },
-        fetchRepositoryAsync: { _, _ in
-            .init(defaultBranch: "main", fork: false, name: "bar", owner: .init(login: "foo"))
-        },
+        fetchRepositoryAsync: { _, _ in .init(defaultBranch: "main", owner: "foo", name: "bar") },
         githubToken: { nil },
         resolvePackageRedirects: { eventLoop, url in
             eventLoop.makeSucceededFuture(.initial(url))

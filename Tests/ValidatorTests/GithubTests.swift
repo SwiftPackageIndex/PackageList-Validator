@@ -17,6 +17,7 @@ import XCTest
 @testable import ValidatorCore
 
 import AsyncHTTPClient
+import NIO
 
 
 final class GithubTests: XCTestCase {
@@ -25,7 +26,7 @@ final class GithubTests: XCTestCase {
         // setup
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
         defer { try? client.syncShutdown() }
-        let repo = Github.Repository(defaultBranch: "main", fork: false, name: "bar", owner: .init(login: "foo"))
+        let repo = Github.Repository(defaultBranch: "main", owner: "foo", name: "bar")
         var calls = 0
         Current.fetch = { client, _ in
             calls += 1
@@ -66,6 +67,23 @@ final class GithubTests: XCTestCase {
 
         // validate
         XCTAssertEqual(calls, 3)
+    }
+
+    func test_listRepositoryFilePaths() async throws {
+        // setup
+        let client = HTTPClient(eventLoopGroupProvider: .singleton)
+        defer { try? client.syncShutdown() }
+        let data = try fixtureData(for: "github-files-response.json")
+        Current.fetch = { client, _ in
+            return client.eventLoopGroup.next().makeSucceededFuture(ByteBuffer(data: data))
+        }
+        let repo = Github.Repository(defaultBranch: "main", owner: "SwiftPackageIndex", name: "SemanticVersion")
+
+        // MUT
+        let paths = try await Github.listRepositoryFilePaths(client: client, repository: repo)
+
+        // validate
+        XCTAssertEqual(paths, [".gitignore", ".spi.yml", "FUNDING.yml", "LICENSE", "Package.swift", "README.md"])
     }
 
 }
