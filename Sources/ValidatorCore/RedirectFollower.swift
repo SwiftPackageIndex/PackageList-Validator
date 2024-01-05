@@ -21,55 +21,6 @@ import AsyncHTTPClient
 import NIO
 
 
-class RedirectFollower: NSObject, URLSessionTaskDelegate {
-    var status: Redirect
-    var session: URLSession?
-    var task: URLSessionDataTask?
-
-    init(initialURL: PackageURL, completion: @escaping (Redirect) -> Void) {
-        self.status = .initial(initialURL)
-        super.init()
-        self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        var req = URLRequest(url: initialURL.rawValue)
-        req.addValue("SPI-Validator", forHTTPHeaderField: "User-Agent")
-        if let token = Current.githubToken() {
-            req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        self.task = session?.dataTask(with: req) { [weak self] (_, response, error) in
-            guard error == nil else {
-                completion(.error("\(error!)"))
-                return
-            }
-            let response = response as! HTTPURLResponse
-            switch response.statusCode {
-                case 401, 403:
-                    completion(.unauthorized)
-                case 404:
-                    completion(.notFound(initialURL))
-                case 429:
-                    let delay = response.value(forHTTPHeaderField: "Retry-After")
-                        .flatMap(Int.init) ?? 5
-                    completion(.rateLimited(delay: delay))
-                default:
-                    completion(self!.status)
-            }
-        }
-        self.task?.resume()
-    }
-
-    func urlSession(_ session: URLSession,
-                    task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) {
-        if let newURL = request.url {
-            self.status = .redirected(to: PackageURL(rawValue: newURL))
-        }
-        completionHandler(request)
-    }
-}
-
-
 enum Redirect: Equatable {
     case initial(PackageURL)
     case error(String)
@@ -91,20 +42,10 @@ enum Redirect: Equatable {
 }
 
 
-func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
-    let promise = eventLoop.next().makePromise(of: Redirect.self)
-
-    let _ = RedirectFollower(initialURL: url) { result in
-        promise.succeed(result)
-    }
-
-    return promise.futureResult
-}
-
 
 func resolveRedirects(for url: PackageURL) async throws -> Redirect {
     let client = HTTPClient(eventLoopGroupProvider: .singleton,
-                                configuration: .init(redirectConfiguration: .disallow))
+                            configuration: .init(redirectConfiguration: .disallow))
     defer { try? client.syncShutdown() }
     return try await resolveRedirects(client: client, for: url).get()
 }
