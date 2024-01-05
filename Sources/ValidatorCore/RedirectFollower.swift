@@ -102,12 +102,11 @@ func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFut
 }
 
 
-func resolveRedirects(for url: PackageURL) async -> Redirect {
-    await withCheckedContinuation { continuation in
-        let _ = RedirectFollower(initialURL: url) {
-            continuation.resume(returning: $0)
-        }
-    }
+func resolveRedirects(for url: PackageURL) async throws -> Redirect {
+    let client = HTTPClient(eventLoopGroupProvider: .singleton,
+                                configuration: .init(redirectConfiguration: .disallow))
+    defer { try? client.syncShutdown() }
+    return try await resolveRedirects(client: client, for: url).get()
 }
 
 
