@@ -16,6 +16,7 @@ import Foundation
 
 import AsyncHTTPClient
 import NIO
+import NIOFoundationCompat
 import NIOHTTP1
 
 #if os(Linux)
