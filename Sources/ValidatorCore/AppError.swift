@@ -22,6 +22,7 @@ enum AppError: Error {
     case invalidPackage(url: PackageURL)
     case invalidDenyListUrl(string: String)
     case ioError(String)
+    case manifestNotFound(owner: String, name: String)
     case noData(URL)
     case rateLimited(until: Date)
     case repositoryNotFound(owner: String, name: String)
