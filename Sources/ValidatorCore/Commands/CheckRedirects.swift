@@ -110,7 +110,8 @@ extension Validator {
             let verbose = verbose
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
-            let httpClient = HTTPClient(eventLoopGroupProvider: .singleton)
+            let httpClient = HTTPClient(eventLoopGroupProvider: .singleton,
+                                        configuration: .init(redirectConfiguration: .disallow))
             defer { try? httpClient.syncShutdown() }
 
             let offset = min(offset, inputURLs.count - 1)
@@ -120,7 +121,6 @@ extension Validator {
                 print("Chunk \(chunk) of \(numberOfChunks)")
             }
 
-            let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
             var normalized = Set(inputURLs.map { $0.normalized() })
             let updated = try inputURLs[offset...]
                 .prefix(prefix)
@@ -128,8 +128,7 @@ extension Validator {
                 .enumerated()
                 .compactMap { (index, packageURL) -> PackageURL? in
                     let index = index + offset
-                    let redirect = try resolvePackageRedirects(eventLoop: eventLoop,
-                                                               for: packageURL)
+                    let redirect = try resolvePackageRedirects(client: httpClient, for: packageURL)
                         .wait()
 
                     if index % 100 == 0, let token = Current.githubToken() {
