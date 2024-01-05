@@ -20,7 +20,7 @@ import CanonicalPackageURL
 import NIO
 
 
-final class CheckDependencies2Tests: XCTestCase {
+final class CheckDependenciesTests: XCTestCase {
     var check = CheckDependencies()
 
     override func setUp() {
