@@ -62,6 +62,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
             if idx % 10 == 0 {
                 print("Progress:", idx, "/", missing.count)
             }
+            
             // resolve redirects
             print("Processing:", dep.packageURL, "...")
             guard let resolved = await Current.resolvePackageRedirectsAsync(dep.packageURL).url else {
@@ -69,13 +70,25 @@ public struct CheckDependencies2: AsyncParsableCommand {
                 print("  ... ⛔ redirect resolution returned nil")
                 continue
             }
+            
             if resolved.canonicalPackageURL.canonicalPath != dep.canonicalPath {
                 print("  ... redirected to:", resolved)
             }
+
             if allPackages.contains(resolved.canonicalPackageURL) {
                 print("  ... ⛔ already indexed")
                 continue
             }
+
+            do {  // run package dump to validate
+                let repo = try await Current.fetchRepositoryAsync(client, resolved)
+                let manifest = try await Package.getManifestURL(client: client, repository: repo)
+                _ = try Current.decodeManifest(manifest)
+            } catch {
+                print("  ... ⛔ \(error)")
+                continue
+            }
+
             if newPackages.insert(resolved.appendingGitExtension().canonicalPackageURL).inserted {
                 print("✅ ADD (\(newPackages.count)):", resolved.appendingGitExtension())
             }
