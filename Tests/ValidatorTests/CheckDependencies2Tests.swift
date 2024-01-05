@@ -28,6 +28,7 @@ final class CheckDependencies2Tests: XCTestCase {
         check.apiBaseURL = "unused"
         check.input = nil
         check.limit = .max
+        check.maxCheck = .max
         check.spiApiToken = "unused"
         check.output = "unused"
     }
