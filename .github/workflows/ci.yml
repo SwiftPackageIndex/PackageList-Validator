@@ -39,6 +39,9 @@ jobs:
         run: |
           swift build
 
+      - name: Install curl
+        run: apt-get update && apt-get install -y curl
+
       - name: Check redirects
         run: ./check-redirects.sh
 
