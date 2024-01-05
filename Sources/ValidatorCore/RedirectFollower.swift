@@ -16,6 +16,8 @@ import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+
+import AsyncHTTPClient
 import NIO
 
 
@@ -108,51 +110,6 @@ func resolveRedirects(for url: PackageURL) async -> Redirect {
     }
 }
 
-
-/// Resolve redirects for package urls. In particular, this strips the `.git` extension from the test url, because it would always lead to a redirect. It also normalizes the output to always have a `.git` extension.
-/// - Parameters:
-///   - eventLoop: EventLoop
-///   - url: url to test
-///   - timeout: request timeout
-/// - Returns: `Redirect`
-@available(*, deprecated)
-func resolvePackageRedirects(eventLoop: EventLoop,
-                             for url: PackageURL) -> EventLoopFuture<Redirect> {
-    let maxDepth = 10
-    var depth = 0
-
-    func _resolvePackageRedirects(eventLoop: EventLoop,
-                                  for url: PackageURL) -> EventLoopFuture<Redirect> {
-        resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
-            .flatMap { status -> EventLoopFuture<Redirect> in
-                switch status {
-                    case .initial, .notFound, .error, .unauthorized:
-                        return eventLoop.makeSucceededFuture(status)
-                    case .rateLimited(let delay):
-                        guard depth < maxDepth else {
-                            return eventLoop.makeFailedFuture(
-                                AppError.runtimeError("recursion limit exceeded")
-                            )
-                        }
-                        depth += 1
-                        print("RATE LIMITED")
-                        print("sleeping for \(delay)s ...")
-                        fflush(stdout)
-                        sleep(UInt32(delay))
-                        return resolvePackageRedirects(eventLoop: eventLoop, for: url)
-                    case .redirected(to: let url):
-                        return eventLoop.makeSucceededFuture(.redirected(to: url.appendingGitExtension()))
-                }
-            }
-    }
-
-    return _resolvePackageRedirects(eventLoop: eventLoop, for: url)
-}
-
-
-// MARK: - new
-
-import AsyncHTTPClient
 
 func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
     var lastResult = Redirect.initial(url)
