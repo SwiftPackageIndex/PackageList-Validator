@@ -20,7 +20,7 @@ import CanonicalPackageURL
 import NIO
 
 
-final class CheckDependencies2Tests: XCTestCase {
+final class CheckDependenciesTests: XCTestCase {
     var check = CheckDependencies()
 
     override func setUp() {
@@ -28,6 +28,7 @@ final class CheckDependencies2Tests: XCTestCase {
         check.apiBaseURL = "unused"
         check.input = nil
         check.limit = .max
+        check.maxCheck = .max
         check.spiApiToken = "unused"
         check.output = "unused"
     }
@@ -56,7 +57,7 @@ final class CheckDependencies2Tests: XCTestCase {
             saved = list
             return true
         }
-        Current.fetchRepositoryAsync = { _, url in
+        Current.fetchRepository = { _, url in
             if url == PackageURL.p3 {
                 return .init(defaultBranch: "main", owner: "org", name: "3")
             } else {
@@ -114,7 +115,7 @@ final class CheckDependencies2Tests: XCTestCase {
             saved = list
             return true
         }
-        Current.fetchRepositoryAsync = { _, url in
+        Current.fetchRepository = { _, url in
             if url == PackageURL.p3 {
                 return .init(defaultBranch: "main", owner: "org", name: "3")
             } else {
@@ -162,7 +163,7 @@ final class CheckDependencies2Tests: XCTestCase {
             saved = list
             return true
         }
-        Current.fetchRepositoryAsync = { _, url in
+        Current.fetchRepository = { _, url in
             if url == PackageURL.p3 {
                 return .init(defaultBranch: "main", owner: "org", name: "3")
             } else {

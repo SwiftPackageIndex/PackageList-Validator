@@ -24,7 +24,21 @@ env:
   SPI_API_TOKEN: ${{ secrets.SPI_API_TOKEN }}
 
 jobs:
-  test-validator-Linux:
+  swift-test-Linux:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:5.9-jammy
+    steps:
+      - name: Get swift version
+        run: swift --version
+    
+      - name: Checkout
+        uses: actions/checkout@v3
+    
+      - name: Run tests
+        run: swift test
+
+  end-to-end-test-Linux:
     runs-on: ubuntu-latest
     container:
       image: swift:5.9-jammy
@@ -36,8 +50,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build validator
-        run: |
-          swift build
+        run: swift build
 
       - name: Install curl
         run: apt-get update && apt-get install -y curl

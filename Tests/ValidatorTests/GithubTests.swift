@@ -22,6 +22,10 @@ import NIO
 
 final class GithubTests: XCTestCase {
 
+    override func setUp() async throws {
+        Github.repositoryCache = .init()
+    }
+
     func test_fetchRepository_retry() async throws {
         // setup
         let client = HTTPClient(eventLoopGroupProvider: .singleton)

@@ -69,7 +69,7 @@ public struct CheckDependencies: AsyncParsableCommand {
             
             // resolve redirects
             print("Processing:", dep.packageURL, "...")
-            guard let resolved = await Current.resolvePackageRedirectsAsync(dep.packageURL).url else {
+            guard let resolved = await Current.resolvePackageRedirects(dep.packageURL).url else {
                 // TODO: consider adding retry for some errors
                 print("  ... ⛔ redirect resolution returned nil")
                 continue
@@ -85,7 +85,7 @@ public struct CheckDependencies: AsyncParsableCommand {
             }
 
             do {  // run package dump to validate
-                let repo = try await Current.fetchRepositoryAsync(client, resolved)
+                let repo = try await Current.fetchRepository(client, resolved)
                 let manifest = try await Package.getManifestURL(client: client, repository: repo)
                 _ = try Current.decodeManifest(manifest)
             } catch {
