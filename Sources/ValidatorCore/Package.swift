@@ -118,13 +118,26 @@ extension Package {
     enum Manifest {}
     typealias ManifestURL = Tagged<Manifest, URL>
 
+    @available(*, deprecated)
     static func getManifestURL(client: HTTPClient, packageURL: PackageURL) -> EventLoopFuture<ManifestURL> {
         Current.fetchRepository(client, packageURL.owner, packageURL.repository)
-            .map(\.default_branch)
+            .map(\.defaultBranch)
             .map { defaultBranch in
                 URL(string: "https://raw.githubusercontent.com/\(packageURL.owner)/\(packageURL.repository)/\(defaultBranch)/Package.swift")!
             }
             .map(ManifestURL.init(rawValue:))
+    }
+
+    static func getManifestURL(client: HTTPClient, repository: Github.Repository) async throws -> ManifestURL {
+        let manifestFiles = try await Github.listRepositoryFilePaths(client: client, repository: repository)
+          .filter { $0.hasPrefix("Package") }
+          .filter { $0.hasSuffix(".swift") }
+          .sorted()
+        guard let manifestFile = manifestFiles.last else {
+            throw AppError.manifestNotFound(owner: repository.owner.login, name: repository.name)
+        }
+        let url = URL(string: "https://raw.githubusercontent.com/\(repository.path)/\(repository.defaultBranch)/\(manifestFile)")!
+        return .init(rawValue: url)
     }
 
 }

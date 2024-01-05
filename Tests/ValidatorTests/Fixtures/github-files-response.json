@@ -1,0 +1,76 @@
+{
+  "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/trees\/ea8eea9d89842a29af1b8e6c7677f1c86e72fa42",
+  "tree" : [
+    {
+      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/trees\/985905a81c0fbbea830070a058a4368b64c983d5",
+      "path" : ".github",
+      "sha" : "985905a81c0fbbea830070a058a4368b64c983d5",
+      "mode" : "040000",
+      "type" : "tree"
+    },
+    {
+      "type" : "blob",
+      "mode" : "100644",
+      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/blobs\/5812d0fd3ed81435c93f9cecf6ac5d6878949140",
+      "sha" : "5812d0fd3ed81435c93f9cecf6ac5d6878949140",
+      "size" : 50,
+      "path" : ".gitignore"
+    },
+    {
+      "mode" : "100644",
+      "size" : 100,
+      "path" : ".spi.yml",
+      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/blobs\/03cc90728b8a45dd7adb42f3c214ccd4b8be4eb4",
+      "type" : "blob",
+      "sha" : "03cc90728b8a45dd7adb42f3c214ccd4b8be4eb4"
+    },
+    {
+      "type" : "blob",
+      "size" : 160,
+      "sha" : "bb3db5b735bdaed95d21048ddbd6a002697af90c",
+      "path" : "FUNDING.yml",
+      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/blobs\/bb3db5b735bdaed95d21048ddbd6a002697af90c",
+      "mode" : "100644"
+    },
+    {
+      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/blobs\/dd5b3a58aa1849f452abc9b5cd1638dc71a5e482",
+      "path" : "LICENSE",
+      "size" : 10141,
+      "type" : "blob",
+      "mode" : "100644",
+      "sha" : "dd5b3a58aa1849f452abc9b5cd1638dc71a5e482"
+    },
+    {
+      "size" : 1122,
+      "type" : "blob",
+      "path" : "Package.swift",
+      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/blobs\/bf4aa0c6a8bd9f749c2f96905c40bf2f70ef97d2",
+      "mode" : "100644",
+      "sha" : "bf4aa0c6a8bd9f749c2f96905c40bf2f70ef97d2"
+    },
+    {
+      "mode" : "100644",
+      "path" : "README.md",
+      "type" : "blob",
+      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/blobs\/d6f2896b11f092297ec18b217c5d1e78d0b0a939",
+      "sha" : "d6f2896b11f092297ec18b217c5d1e78d0b0a939",
+      "size" : 2973
+    },
+    {
+      "mode" : "040000",
+      "type" : "tree",
+      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/trees\/296bc6314f88a78e0421e24ecf0b04fc5cc74fdc",
+      "path" : "Sources",
+      "sha" : "296bc6314f88a78e0421e24ecf0b04fc5cc74fdc"
+    },
+    {
+      "path" : "Tests",
+      "mode" : "040000",
+      "sha" : "beeb61970de55ecaadd5443a96f9daddce0de9b4",
+      "type" : "tree",
+      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/trees\/beeb61970de55ecaadd5443a96f9daddce0de9b4"
+    }
+  ],
+  "sha" : "ea8eea9d89842a29af1b8e6c7677f1c86e72fa42",
+  "truncated" : false
+}

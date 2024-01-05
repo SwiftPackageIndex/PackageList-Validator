@@ -1,0 +1,101 @@
+{
+  "tree" : [
+    {
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/024f01f8183865bd26e15a7828b0d3a33028d5c5",
+      "path" : ".gitignore",
+      "sha" : "024f01f8183865bd26e15a7828b0d3a33028d5c5",
+      "size" : 290,
+      "type" : "blob",
+      "mode" : "100644"
+    },
+    {
+      "path" : ".swift-version",
+      "type" : "blob",
+      "mode" : "100644",
+      "sha" : "6b244dcd6960b101b0ab4d9e5162d39632dec80c",
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/6b244dcd6960b101b0ab4d9e5162d39632dec80c",
+      "size" : 6
+    },
+    {
+      "type" : "blob",
+      "path" : ".travis.yml",
+      "mode" : "100644",
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/70e2b4cdfc5b7e26d7f55d97833f96aeb7d5c481",
+      "size" : 1697,
+      "sha" : "70e2b4cdfc5b7e26d7f55d97833f96aeb7d5c481"
+    },
+    {
+      "sha" : "a7af196875ec68b64f30963189392f71ab9ecf79",
+      "type" : "blob",
+      "mode" : "100644",
+      "size" : 1075,
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/a7af196875ec68b64f30963189392f71ab9ecf79",
+      "path" : "LICENSE"
+    },
+    {
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/e0570d6a1e3f5b1b4bd213315d8f0966ca8f675f",
+      "path" : "Package.pins",
+      "mode" : "100644",
+      "type" : "blob",
+      "size" : 53,
+      "sha" : "e0570d6a1e3f5b1b4bd213315d8f0966ca8f675f"
+    },
+    {
+      "path" : "Package.swift",
+      "mode" : "100644",
+      "size" : 825,
+      "type" : "blob",
+      "sha" : "63080bd3c929a37b0c8d0796b5d08e51794c18c2",
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/63080bd3c929a37b0c8d0796b5d08e51794c18c2"
+    },
+    {
+      "type" : "blob",
+      "path" : "Package@swift-4.2.swift",
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/7bd26320357525801b4607dcf78bfeab4ece8508",
+      "sha" : "7bd26320357525801b4607dcf78bfeab4ece8508",
+      "size" : 1517,
+      "mode" : "100644"
+    },
+    {
+      "path" : "Package@swift-4.swift",
+      "type" : "blob",
+      "sha" : "17d053009476faba4f7832d8fb0f408d6cf94ffa",
+      "mode" : "100644",
+      "size" : 1517,
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/17d053009476faba4f7832d8fb0f408d6cf94ffa"
+    },
+    {
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/b263042f912ec32a770d2ba254bb6a8c2a49122a",
+      "path" : "Package@swift-5.swift",
+      "size" : 1517,
+      "type" : "blob",
+      "mode" : "100644",
+      "sha" : "b263042f912ec32a770d2ba254bb6a8c2a49122a"
+    },
+    {
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/blobs\/4003b2930a1f8488067c543810d02e6fa2c7c949",
+      "type" : "blob",
+      "size" : 8861,
+      "mode" : "100644",
+      "path" : "README.md",
+      "sha" : "4003b2930a1f8488067c543810d02e6fa2c7c949"
+    },
+    {
+      "mode" : "040000",
+      "sha" : "4134f985c3bf0d4fc7029a127fa5082f2a7755a3",
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/trees\/4134f985c3bf0d4fc7029a127fa5082f2a7755a3",
+      "type" : "tree",
+      "path" : "Sources"
+    },
+    {
+      "type" : "tree",
+      "sha" : "02fff52637912ccbcbbbbf2aa469de994c8b3441",
+      "path" : "Tests",
+      "mode" : "040000",
+      "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/trees\/02fff52637912ccbcbbbbf2aa469de994c8b3441"
+    }
+  ],
+  "sha" : "f9b4754017cfad4701f0838b2e507b442eaca70a",
+  "url" : "https:\/\/api.github.com\/repos\/IBM-Swift\/SwiftyJSON\/git\/trees\/f9b4754017cfad4701f0838b2e507b442eaca70a",
+  "truncated" : false
+}
