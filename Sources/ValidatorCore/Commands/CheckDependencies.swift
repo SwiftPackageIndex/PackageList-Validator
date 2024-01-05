@@ -19,7 +19,7 @@ import AsyncHTTPClient
 import CanonicalPackageURL
 
 
-public struct CheckDependencies2: AsyncParsableCommand {
+public struct CheckDependencies: AsyncParsableCommand {
     @Option(name: .long)
     var apiBaseURL: String = "https://swiftpackageindex.com"
 
@@ -28,6 +28,9 @@ public struct CheckDependencies2: AsyncParsableCommand {
 
     @Option(name: .shortAndLong)
     var limit: Int = .max
+
+    @Option(name: .shortAndLong)
+    var maxCheck: Int = .max
 
     @Option(name: .shortAndLong, help: "save changes to output file")
     var output: String?
@@ -58,6 +61,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
         var newPackages = UniqueCanonicalPackageURLs()
         for (idx, dep) in missing
             .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
+            .prefix(maxCheck)
             .enumerated() {
             if idx % 10 == 0 {
                 print("Progress:", idx, "/", missing.count)
@@ -124,7 +128,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
 }
 
 
-extension CheckDependencies2 {
+extension CheckDependencies {
     var inputSource: InputSource {
         switch (input, packageUrls.count) {
             case (.some(let fname), 0):
