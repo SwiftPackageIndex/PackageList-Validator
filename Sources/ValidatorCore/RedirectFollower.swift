@@ -47,7 +47,13 @@ func resolveRedirects(for url: PackageURL) async throws -> Redirect {
     let client = HTTPClient(eventLoopGroupProvider: .singleton,
                             configuration: .init(redirectConfiguration: .disallow))
     defer { try? client.syncShutdown() }
-    return try await resolveRedirects(client: client, for: url).get()
+    let res = try await resolveRedirects(client: client, for: url.deletingGitExtension()).get()
+    switch res {
+        case .initial, .notFound, .error, .unauthorized, .rateLimited:
+            return res
+        case .redirected(to: let newURL):
+            return .redirected(to: newURL.appendingGitExtension())
+    }
 }
 
 
