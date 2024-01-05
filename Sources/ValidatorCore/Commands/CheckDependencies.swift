@@ -29,6 +29,9 @@ public struct CheckDependencies: AsyncParsableCommand {
     @Option(name: .shortAndLong)
     var limit: Int = .max
 
+    @Option(name: .shortAndLong)
+    var maxCheck: Int = .max
+
     @Option(name: .shortAndLong, help: "save changes to output file")
     var output: String?
 
@@ -58,6 +61,7 @@ public struct CheckDependencies: AsyncParsableCommand {
         var newPackages = UniqueCanonicalPackageURLs()
         for (idx, dep) in missing
             .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
+            .prefix(maxCheck)
             .enumerated() {
             if idx % 10 == 0 {
                 print("Progress:", idx, "/", missing.count)

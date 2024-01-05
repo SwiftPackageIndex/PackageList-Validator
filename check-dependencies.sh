@@ -22,4 +22,7 @@ curl -s https://raw.githubusercontent.com/SwiftPackageIndex/PackageList/main/pac
 echo "..."
 echo
 
-$validator check-dependencies --use-package-list -o packages.json -l 10 --chunk 1 --number-of-chunks 3
+$validator check-dependencies \
+    --spi-api-token "$SPI_API_TOKEN" \
+    -i packages.json -o packages.json \
+    --max-check 1
