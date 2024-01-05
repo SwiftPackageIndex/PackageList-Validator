@@ -160,7 +160,6 @@ func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFutur
     let maxHops = 10
 
     func _resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
-        print("Resolving:", url)
         do {
             var request = try HTTPClient.Request(url: url.rawValue, method: .HEAD, headers: .init([
                 ("User-Agent", "SPI-Validator")
@@ -170,7 +169,6 @@ func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFutur
             }
             return client.execute(request: request)
                 .flatMap { response in
-                    print("status:", response.status.code)
                     let el = client.eventLoopGroup.next()
                     switch response.status.code {
                         case 200...299:
