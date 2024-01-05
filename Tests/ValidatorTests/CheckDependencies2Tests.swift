@@ -21,7 +21,7 @@ import NIO
 
 
 final class CheckDependencies2Tests: XCTestCase {
-    var check = CheckDependencies2()
+    var check = CheckDependencies()
 
     override func setUp() {
         super.setUp()

@@ -19,7 +19,7 @@ import AsyncHTTPClient
 import CanonicalPackageURL
 
 
-public struct CheckDependencies2: AsyncParsableCommand {
+public struct CheckDependencies: AsyncParsableCommand {
     @Option(name: .long)
     var apiBaseURL: String = "https://swiftpackageindex.com"
 
@@ -124,7 +124,7 @@ public struct CheckDependencies2: AsyncParsableCommand {
 }
 
 
-extension CheckDependencies2 {
+extension CheckDependencies {
     var inputSource: InputSource {
         switch (input, packageUrls.count) {
             case (.some(let fname), 0):
