@@ -51,7 +51,7 @@ func resolveRedirects(for url: PackageURL) async throws -> Redirect {
 }
 
 
-func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
+private func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
     var lastResult = Redirect.initial(url)
     var hopCount = 0
     let maxHops = 10
@@ -127,10 +127,6 @@ func resolveRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFutur
 
 
 /// Resolve redirects for package urls. In particular, this strips the `.git` extension from the test url, because it would always lead to a redirect. It also normalizes the output to always have a `.git` extension.
-/// - Parameters:
-///   - eventLoop: EventLoop
-///   - url: url to test
-///   - timeout: request timeout
 /// - Returns: `Redirect`
 func resolvePackageRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
     resolveRedirects(client: client, for: url.deletingGitExtension())
