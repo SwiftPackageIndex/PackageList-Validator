@@ -16,62 +16,19 @@ import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+
+import AsyncHTTPClient
 import NIO
 
-
-class RedirectFollower: NSObject, URLSessionTaskDelegate {
-    var status: Redirect
-    var session: URLSession?
-    var task: URLSessionDataTask?
-
-    init(initialURL: PackageURL, completion: @escaping (Redirect) -> Void) {
-        self.status = .initial(initialURL)
-        super.init()
-        self.session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        var req = URLRequest(url: initialURL.rawValue)
-        req.addValue("SPI-Validator", forHTTPHeaderField: "User-Agent")
-        if let token = Current.githubToken() {
-            req.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        self.task = session?.dataTask(with: req) { [weak self] (_, response, error) in
-            guard error == nil else {
-                completion(.error("\(error!)"))
-                return
-            }
-            let response = response as! HTTPURLResponse
-            switch response.statusCode {
-                case 401, 403:
-                    completion(.unauthorized)
-                case 404:
-                    completion(.notFound)
-                case 429:
-                    let delay = response.value(forHTTPHeaderField: "Retry-After")
-                        .flatMap(Int.init) ?? 5
-                    completion(.rateLimited(delay: delay))
-                default:
-                    completion(self!.status)
-            }
-        }
-        self.task?.resume()
-    }
-
-    func urlSession(_ session: URLSession,
-                    task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) {
-        if let newURL = request.url {
-            self.status = .redirected(to: PackageURL(rawValue: newURL))
-        }
-        completionHandler(request)
-    }
-}
+#if os(Linux)
+import CDispatch // for NSEC_PER_SEC https://github.com/apple/swift-corelibs-libdispatch/issues/659
+#endif
 
 
 enum Redirect: Equatable {
     case initial(PackageURL)
     case error(String)
-    case notFound
+    case notFound(PackageURL)
     case rateLimited(delay: Int)
     case redirected(to: PackageURL)
     case unauthorized
@@ -89,61 +46,94 @@ enum Redirect: Equatable {
 }
 
 
-func resolveRedirects(eventLoop: EventLoop, for url: PackageURL) -> EventLoopFuture<Redirect> {
-    let promise = eventLoop.next().makePromise(of: Redirect.self)
 
-    let _ = RedirectFollower(initialURL: url) { result in
-        promise.succeed(result)
+func resolveRedirects(for url: PackageURL) async throws -> Redirect {
+    let client = HTTPClient(eventLoopGroupProvider: .singleton,
+                            configuration: .init(redirectConfiguration: .disallow))
+    defer { try? client.syncShutdown() }
+    let res = try await resolveRedirects(client: client, for: url.deletingGitExtension())
+    switch res {
+        case .initial, .notFound, .error, .unauthorized, .rateLimited:
+            return res
+        case .redirected(to: let newURL):
+            return .redirected(to: newURL.appendingGitExtension())
     }
-
-    return promise.futureResult
 }
 
 
-func resolveRedirects(for url: PackageURL) async -> Redirect {
-    await withCheckedContinuation { continuation in
-        let _ = RedirectFollower(initialURL: url) {
-            continuation.resume(returning: $0)
+private func resolveRedirects(client: HTTPClient, for url: PackageURL) async throws -> Redirect {
+    var lastResult = Redirect.initial(url)
+    var hopCount = 0
+    let maxHops = 10
+
+    func _resolveRedirects(client: HTTPClient, for url: PackageURL) async throws -> Redirect {
+        var request = try HTTPClient.Request(url: url.rawValue, method: .HEAD, headers: .init([
+            ("User-Agent", "SPI-Validator")
+        ]))
+        if let token = Current.githubToken() {
+            request.headers.add(name: "Authorization", value: "Bearer \(token)")
+        }
+        do {
+            let response = try await client.execute(request: request).get()
+            switch response.status.code {
+                case 200...299:
+                    return lastResult
+                case 301:
+                    guard hopCount < maxHops else {
+                        throw AppError.runtimeError("max redirects exceeded for url: \(url.absoluteString)")
+                    }
+                    guard let redirected = response.headers["Location"]
+                        .first
+                        .flatMap(URL.init(string:))
+                        .map(PackageURL.init(rawValue:)) else {
+                        throw AppError.runtimeError("no Location header for url: \(url.absoluteString)")
+                    }
+                    lastResult = .redirected(to: redirected)
+                    hopCount += 1
+                    return try await _resolveRedirects(client: client, for: redirected)
+                case 404:
+                    return .notFound(url)
+                case 429:
+                    print("RATE LIMITED")
+                    let delay = response.headers["Retry-After"]
+                        .first
+                        .flatMap(UInt64.init) ?? 60
+                    print("Sleeping for \(delay)s ...")
+                    try await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
+                    return try await _resolveRedirects(client: client, for: url)
+                default:
+                    throw AppError.runtimeError("unexpected status '\(response.status.code)' for url: \(url.absoluteString)")
+            }
+        } catch let error as HTTPClientError where error == .remoteConnectionClosed {
+            hopCount += 1
+            let delay: UInt64 = 5
+            print("CONNECTION CLOSED")
+            print("retrying in \(delay)s ...")
+            try await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
+            return try await _resolveRedirects(client: client, for: url)
         }
     }
+
+    return try await _resolveRedirects(client: client, for: url)
 }
 
 
 /// Resolve redirects for package urls. In particular, this strips the `.git` extension from the test url, because it would always lead to a redirect. It also normalizes the output to always have a `.git` extension.
-/// - Parameters:
-///   - eventLoop: EventLoop
-///   - url: url to test
-///   - timeout: request timeout
 /// - Returns: `Redirect`
-func resolvePackageRedirects(eventLoop: EventLoop,
-                             for url: PackageURL) -> EventLoopFuture<Redirect> {
-    let maxDepth = 10
-    var depth = 0
-
-    func _resolvePackageRedirects(eventLoop: EventLoop,
-                                  for url: PackageURL) -> EventLoopFuture<Redirect> {
-        resolveRedirects(eventLoop: eventLoop, for: url.deletingGitExtension())
-            .flatMap { status -> EventLoopFuture<Redirect> in
-                switch status {
-                    case .initial, .notFound, .error, .unauthorized:
-                        return eventLoop.makeSucceededFuture(status)
-                    case .rateLimited(let delay):
-                        guard depth < maxDepth else {
-                            return eventLoop.makeFailedFuture(
-                                AppError.runtimeError("recursion limit exceeded")
-                            )
-                        }
-                        depth += 1
-                        print("RATE LIMITED")
-                        print("sleeping for \(delay)s ...")
-                        fflush(stdout)
-                        sleep(UInt32(delay))
-                        return resolvePackageRedirects(eventLoop: eventLoop, for: url)
-                    case .redirected(to: let url):
-                        return eventLoop.makeSucceededFuture(.redirected(to: url.appendingGitExtension()))
-                }
-            }
+@available(*, deprecated)
+func resolvePackageRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
+    let promise = client.eventLoopGroup.next().makePromise(of: Redirect.self)
+    promise.completeWithTask {
+        try await resolveRedirects(client: client, for: url.deletingGitExtension())
     }
-
-    return _resolvePackageRedirects(eventLoop: eventLoop, for: url)
+    return promise.futureResult
+        .map {
+            switch $0 {
+                case .initial, .notFound, .error, .unauthorized, .rateLimited:
+                    return $0
+                case .redirected(to: let url):
+                    return .redirected(to: url.appendingGitExtension())
+            }
+        }
 }
+

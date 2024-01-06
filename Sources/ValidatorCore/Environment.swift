@@ -25,7 +25,7 @@ struct Environment {
     var fetchDependencies: (_ api: SwiftPackageIndexAPI) async throws -> [SwiftPackageIndexAPI.PackageRecord]
     var fetchRepository: (_ client: HTTPClient, _ url: PackageURL) async throws -> Github.Repository
     var githubToken: () -> String?
-    var resolvePackageRedirects: (PackageURL) async -> Redirect
+    var resolvePackageRedirects: (PackageURL) async throws -> Redirect
     var shell: Shell
 }
 
