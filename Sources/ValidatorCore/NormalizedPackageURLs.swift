@@ -9,6 +9,7 @@ actor NormalizedPackageURLs {
         normalized.contains(url.normalized())
     }
 
+    @discardableResult
     func insert(_ url: PackageURL) -> (inserted: Bool, memberAfterInsert: String) {
         normalized.insert(url.normalized())
     }
