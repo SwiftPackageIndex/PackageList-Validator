@@ -127,13 +127,5 @@ func resolvePackageRedirects(client: HTTPClient, for url: PackageURL) -> EventLo
         try await resolveRedirects(client: client, for: url.deletingGitExtension())
     }
     return promise.futureResult
-        .map {
-            switch $0 {
-                case .initial, .notFound, .error, .unauthorized, .rateLimited:
-                    return $0
-                case .redirected(to: let url):
-                    return .redirected(to: url.appendingGitExtension())
-            }
-        }
 }
 
