@@ -20,6 +20,9 @@ import AsyncHTTPClient
 
 extension Validator {
     struct CheckRedirects: AsyncParsableCommand {
+        @Option(name: .shortAndLong, help: "number of checks to run in parallel")
+        var concurrency: Int?
+
         @Option(name: .shortAndLong, help: "read input from file")
         var input: String?
 
@@ -66,11 +69,12 @@ extension Validator {
             }
         }
 
+        static var normalizedPackageURLs = NormalizedPackageURLs(inputURLs: [])
+
         static func process(redirect: Redirect,
                             verbose: Bool,
                             index: Int,
-                            packageURL: PackageURL,
-                            normalized: inout Set<String>) throws -> PackageURL? {
+                            packageURL: PackageURL) async throws -> PackageURL? {
             if verbose || index % 50 == 0 {
                 print("package \(index) ...")
                 fflush(stdout)
@@ -92,13 +96,13 @@ extension Validator {
                 case .rateLimited:
                     fatalError("rate limited - should have been retried at a lower level")
                 case .redirected(let url):
-                    guard !normalized.contains(url.normalized()) else {
+                    if await normalizedPackageURLs.insert(url).inserted {
+                        print("ADD \(packageURL) -> \(url) (new)")
+                        return url
+                    } else {
                         print("DELETE \(packageURL) -> \(url) (exists)")
                         return nil
                     }
-                    print("ADD \(packageURL) -> \(url) (new)")
-                    normalized.insert(url.normalized())
-                    return url
                 case .unauthorized:
                     print("package \(index) ...")
                     print("UNAUTHORIZED: \(packageURL.absoluteString) (deleting package)")
@@ -107,6 +111,16 @@ extension Validator {
         }
 
         func run() async throws {
+            let start = Date()
+            defer {
+                let elapsed = Date().timeIntervalSince(start)
+                if elapsed < 120 {
+                    print("Elapsed (/s):", elapsed)
+                } else {
+                    print("Elapsed (/min):", elapsed/60)
+                }
+            }
+
             let verbose = verbose
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
@@ -121,35 +135,44 @@ extension Validator {
                 print("Chunk \(chunk) of \(numberOfChunks)")
             }
 
-            var normalized = Set(inputURLs.map { $0.normalized() })
-            var updated = [PackageURL]()
+            Self.normalizedPackageURLs = .init(inputURLs: inputURLs)
 
-            for (index, packageURL) in inputURLs[offset...]
-                .prefix(prefix)
-                .chunk(index: chunk, of: numberOfChunks)
-                .enumerated() {
-                let index = index + offset
-                let redirect = try await resolvePackageRedirects(client: httpClient, for: packageURL)
+            let semaphore = Semaphore(maximum: concurrency ?? 1)
 
-                if index % 100 == 0, let token = Current.githubToken() {
-                    let rateLimit = try await Github.getRateLimit(client: httpClient, token: token).get()
-                    if rateLimit.remaining < 200 {
-                        print("Rate limit remaining: \(rateLimit.remaining)")
-                        print("Sleeping until reset at \(rateLimit.resetDate) ...")
-                        sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
+            let updated = try await withThrowingTaskGroup(of: PackageURL?.self) { group in
+                for (index, packageURL) in inputURLs[offset...]
+                    .prefix(prefix)
+                    .chunk(index: chunk, of: numberOfChunks)
+                    .enumerated() {
+                    await semaphore.increment()
+                    try? await semaphore.waitForAvailability()
+                    group.addTask {
+                        let index = index + offset
+                        let redirect = try await resolvePackageRedirects(client: httpClient, for: packageURL)
+
+                        if index % 100 == 0, let token = Current.githubToken() {
+                            let rateLimit = try await Github.getRateLimit(client: httpClient, token: token).get()
+                            if rateLimit.remaining < 200 {
+                                print("Rate limit remaining: \(rateLimit.remaining)")
+                                print("Sleeping until reset at \(rateLimit.resetDate) ...")
+                                sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
+                            }
+                        }
+
+                        let res =  try await Self.process(redirect: redirect,
+                                                          verbose: verbose,
+                                                          index: index,
+                                                          packageURL: packageURL)
+
+                        await semaphore.decrement()
+                        return res
                     }
                 }
-
-                if let res = try Self.process(redirect: redirect,
-                                              verbose: verbose,
-                                              index: index,
-                                              packageURL: packageURL,
-                                              normalized: &normalized) {
-                    updated.append(res)
-                }
+                return try await group
+                    .compactMap { $0 }
+                    .reduce(into: [], { res, next in res.append(next) })
+                    .sorted(by: { $0.lowercased() < $1.lowercased() })
             }
-
-            updated.sort(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)
@@ -157,3 +180,4 @@ extension Validator {
         }
     }
 }
+
