@@ -19,7 +19,7 @@ import AsyncHTTPClient
 
 
 extension Validator {
-    struct CheckRedirects: ParsableCommand {
+    struct CheckRedirects: AsyncParsableCommand {
         @Option(name: .shortAndLong, help: "read input from file")
         var input: String?
 
@@ -106,7 +106,7 @@ extension Validator {
             }
         }
 
-        mutating func run() throws {
+        func run() async throws {
             let verbose = verbose
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
@@ -122,32 +122,34 @@ extension Validator {
             }
 
             var normalized = Set(inputURLs.map { $0.normalized() })
-            let updated = try inputURLs[offset...]
+            var updated = [PackageURL]()
+
+            for (index, packageURL) in inputURLs[offset...]
                 .prefix(prefix)
                 .chunk(index: chunk, of: numberOfChunks)
-                .enumerated()
-                .compactMap { (index, packageURL) -> PackageURL? in
-                    let index = index + offset
-                    let redirect = try resolvePackageRedirects(client: httpClient, for: packageURL)
-                        .wait()
+                .enumerated() {
+                let index = index + offset
+                let redirect = try await resolvePackageRedirects(client: httpClient, for: packageURL)
 
-                    if index % 100 == 0, let token = Current.githubToken() {
-                        let rateLimit = try Github.getRateLimit(client: httpClient,
-                                                                token: token).wait()
-                        if rateLimit.remaining < 200 {
-                            print("Rate limit remaining: \(rateLimit.remaining)")
-                            print("Sleeping until reset at \(rateLimit.resetDate) ...")
-                            sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
-                        }
+                if index % 100 == 0, let token = Current.githubToken() {
+                    let rateLimit = try await Github.getRateLimit(client: httpClient, token: token).get()
+                    if rateLimit.remaining < 200 {
+                        print("Rate limit remaining: \(rateLimit.remaining)")
+                        print("Sleeping until reset at \(rateLimit.resetDate) ...")
+                        sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
                     }
-
-                    return try Self.process(redirect: redirect,
-                                            verbose: verbose,
-                                            index: index,
-                                            packageURL: packageURL,
-                                            normalized: &normalized)
                 }
-                .sorted(by: { $0.lowercased() < $1.lowercased() })
+
+                if let res = try Self.process(redirect: redirect,
+                                              verbose: verbose,
+                                              index: index,
+                                              packageURL: packageURL,
+                                              normalized: &normalized) {
+                    updated.append(res)
+                }
+            }
+
+            updated.sort(by: { $0.lowercased() < $1.lowercased() })
 
             if let path = output {
                 try Current.fileManager.saveList(updated, path: path)

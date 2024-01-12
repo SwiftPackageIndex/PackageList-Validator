@@ -25,7 +25,7 @@ struct Environment {
     var fetchDependencies: (_ api: SwiftPackageIndexAPI) async throws -> [SwiftPackageIndexAPI.PackageRecord]
     var fetchRepository: (_ client: HTTPClient, _ url: PackageURL) async throws -> Github.Repository
     var githubToken: () -> String?
-    var resolvePackageRedirects: (PackageURL) async throws -> Redirect
+    var resolvePackageRedirects: (_ client: HTTPClient, _ url: PackageURL) async throws -> Redirect
     var shell: Shell
 }
 
@@ -38,7 +38,7 @@ extension Environment {
         fetchDependencies: { try await $0.fetchDependencies() },
         fetchRepository: Github.fetchRepository(client:url:),
         githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
-        resolvePackageRedirects: resolveRedirects(for:),
+        resolvePackageRedirects: resolvePackageRedirects(client:for:),
         shell: .live
     )
 
@@ -49,7 +49,7 @@ extension Environment {
         fetchDependencies: { _ in [] },
         fetchRepository: { _, _ in .init(defaultBranch: "main", owner: "foo", name: "bar") },
         githubToken: { nil },
-        resolvePackageRedirects: { .initial($0) },
+        resolvePackageRedirects: { _, url in .initial(url) },
         shell: .mock
     )
 }

@@ -46,21 +46,6 @@ enum Redirect: Equatable {
 }
 
 
-
-func resolveRedirects(for url: PackageURL) async throws -> Redirect {
-    let client = HTTPClient(eventLoopGroupProvider: .singleton,
-                            configuration: .init(redirectConfiguration: .disallow))
-    defer { try? client.syncShutdown() }
-    let res = try await resolveRedirects(client: client, for: url.deletingGitExtension())
-    switch res {
-        case .initial, .notFound, .error, .unauthorized, .rateLimited:
-            return res
-        case .redirected(to: let newURL):
-            return .redirected(to: newURL.appendingGitExtension())
-    }
-}
-
-
 private func resolveRedirects(client: HTTPClient, for url: PackageURL) async throws -> Redirect {
     var lastResult = Redirect.initial(url)
     var hopCount = 0
@@ -118,22 +103,12 @@ private func resolveRedirects(client: HTTPClient, for url: PackageURL) async thr
 }
 
 
-/// Resolve redirects for package urls. In particular, this strips the `.git` extension from the test url, because it would always lead to a redirect. It also normalizes the output to always have a `.git` extension.
-/// - Returns: `Redirect`
-@available(*, deprecated)
-func resolvePackageRedirects(client: HTTPClient, for url: PackageURL) -> EventLoopFuture<Redirect> {
-    let promise = client.eventLoopGroup.next().makePromise(of: Redirect.self)
-    promise.completeWithTask {
-        try await resolveRedirects(client: client, for: url.deletingGitExtension())
+func resolvePackageRedirects(client: HTTPClient, for url: PackageURL) async throws -> Redirect {
+    let res = try await resolveRedirects(client: client, for: url.deletingGitExtension())
+    switch res {
+        case .initial, .notFound, .error, .unauthorized, .rateLimited:
+            return res
+        case .redirected(to: let newURL):
+            return .redirected(to: newURL.appendingGitExtension())
     }
-    return promise.futureResult
-        .map {
-            switch $0 {
-                case .initial, .notFound, .error, .unauthorized, .rateLimited:
-                    return $0
-                case .redirected(to: let url):
-                    return .redirected(to: url.appendingGitExtension())
-            }
-        }
 }
-
