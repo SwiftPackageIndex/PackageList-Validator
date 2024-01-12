@@ -46,21 +46,6 @@ enum Redirect: Equatable {
 }
 
 
-@available(*, deprecated)
-func resolveRedirects(for url: PackageURL) async throws -> Redirect {
-    let client = HTTPClient(eventLoopGroupProvider: .singleton,
-                            configuration: .init(redirectConfiguration: .disallow))
-    defer { try? client.syncShutdown() }
-    let res = try await resolveRedirects(client: client, for: url.deletingGitExtension())
-    switch res {
-        case .initial, .notFound, .error, .unauthorized, .rateLimited:
-            return res
-        case .redirected(to: let newURL):
-            return .redirected(to: newURL.appendingGitExtension())
-    }
-}
-
-
 private func resolveRedirects(client: HTTPClient, for url: PackageURL) async throws -> Redirect {
     var lastResult = Redirect.initial(url)
     var hopCount = 0

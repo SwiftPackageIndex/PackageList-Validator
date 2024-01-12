@@ -55,7 +55,8 @@ public struct CheckDependencies: AsyncParsableCommand {
         let missing = allDependencies.subtracting(allPackages)
         print("Not indexed:", missing.count)
 
-        let client = HTTPClient(eventLoopGroupProvider: .singleton)
+        let client = HTTPClient(eventLoopGroupProvider: .singleton,
+                                configuration: .init(redirectConfiguration: .disallow))
         defer { try? client.syncShutdown() }
 
         var newPackages = UniqueCanonicalPackageURLs()
@@ -69,7 +70,7 @@ public struct CheckDependencies: AsyncParsableCommand {
             
             // resolve redirects
             print("Processing:", dep.packageURL, "...")
-            guard let resolved = try? await Current.resolvePackageRedirects(dep.packageURL).url else {
+            guard let resolved = try? await Current.resolvePackageRedirects(client, dep.packageURL).url else {
                 // TODO: consider adding retry for some errors
                 print("  ... ⛔ redirect resolution returned nil")
                 continue
