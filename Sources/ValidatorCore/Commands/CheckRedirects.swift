@@ -96,13 +96,13 @@ extension Validator {
                 case .rateLimited:
                     fatalError("rate limited - should have been retried at a lower level")
                 case .redirected(let url):
-                    guard await !normalizedPackageURLs.contains(url) else {
+                    if await normalizedPackageURLs.insert(url).inserted {
+                        print("ADD \(packageURL) -> \(url) (new)")
+                        return url
+                    } else {
                         print("DELETE \(packageURL) -> \(url) (exists)")
                         return nil
                     }
-                    print("ADD \(packageURL) -> \(url) (new)")
-                    await normalizedPackageURLs.insert(url)
-                    return url
                 case .unauthorized:
                     print("package \(index) ...")
                     print("UNAUTHORIZED: \(packageURL.absoluteString) (deleting package)")
