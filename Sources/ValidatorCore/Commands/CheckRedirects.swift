@@ -19,7 +19,7 @@ import AsyncHTTPClient
 
 
 extension Validator {
-    struct CheckRedirects: ParsableCommand {
+    struct CheckRedirects: AsyncParsableCommand {
         @Option(name: .shortAndLong, help: "read input from file")
         var input: String?
 
@@ -106,7 +106,7 @@ extension Validator {
             }
         }
 
-        mutating func run() throws {
+        func run() async throws {
             let verbose = verbose
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
