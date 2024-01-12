@@ -13,6 +13,9 @@
 // limitations under the License.
 
 import Foundation
+#if os(Linux)
+import CDispatch // for NSEC_PER_SEC https://github.com/apple/swift-corelibs-libdispatch/issues/659
+#endif
 
 
 actor Semaphore {
