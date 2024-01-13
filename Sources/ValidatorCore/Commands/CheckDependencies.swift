@@ -111,9 +111,9 @@ public struct CheckDependencies: AsyncParsableCommand {
         }
 
         // merge with existing and sort result
+#warning("This is a temporary fix!")
         let packageList = try inputSource.packageURLs()
         let server = serverPackages.map(\.packageURL)
-#warning("This is a temporary fix!")
         let deleted = Set(server).subtracting(packageList)
         let merged = Array(newPackages.map(\.value.packageURL))
             .mergingWithExisting(urls: server)
