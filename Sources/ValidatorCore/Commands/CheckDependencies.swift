@@ -48,11 +48,11 @@ public struct CheckDependencies: AsyncParsableCommand {
         // fetch all dependencies
         let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
         let records = try await Current.fetchDependencies(api)
-        let allPackages = records.allPackages
-        print("Total packages:", allPackages.count)
+        let serverPackages = records.allPackages
+        print("Total packages (server):", serverPackages.count)
 
         let allDependencies = records.allDependencies
-        let missing = allDependencies.subtracting(allPackages)
+        let missing = allDependencies.subtracting(serverPackages)
         print("Not indexed:", missing.count)
 
         let client = HTTPClient(eventLoopGroupProvider: .singleton,
@@ -80,7 +80,7 @@ public struct CheckDependencies: AsyncParsableCommand {
                 print("  ... redirected to:", resolved)
             }
 
-            if allPackages.contains(resolved.canonicalPackageURL) {
+            if serverPackages.contains(resolved.canonicalPackageURL) {
                 print("  ... ⛔ already indexed")
                 continue
             }
@@ -111,10 +111,14 @@ public struct CheckDependencies: AsyncParsableCommand {
         }
 
         // merge with existing and sort result
-        let input = allPackages.map { $0.packageURL }
+#warning("This is a temporary fix!")
+        let packageList = try inputSource.packageURLs()
+        let server = serverPackages.map(\.packageURL)
+        let deleted = Set(server).subtracting(packageList)
         let merged = Array(newPackages.map(\.value.packageURL))
-            .mergingWithExisting(urls: input)
-            .mergingWithExisting(urls: try inputSource.packageURLs())
+            .mergingWithExisting(urls: server)
+            .mergingWithExisting(urls: packageList)
+            .filter { !deleted.contains($0) }
             .sorted(by: { $0.lowercased() < $1.lowercased() })
 
         print("Total:", merged.count)
