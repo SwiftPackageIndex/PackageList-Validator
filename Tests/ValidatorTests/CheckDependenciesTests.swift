@@ -197,6 +197,44 @@ final class CheckDependenciesTests: XCTestCase {
         XCTAssertEqual(saved, [.p1, .p2])
     }
 
+    func test_issue_2828() async throws {
+        // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/2828
+        // The input list coming out of RedirectCheck has removed packages. Ensure they are
+        // not being put back via the API dependency call's package list.
+        Current = .mock
+        Current.fetchDependencies = { _ in [
+            // p1 is still on the server and is being returned by the dependencies API call
+            .init(.p1, dependencies: []),
+            .init(.p2, dependencies: []),
+        ]}
+        var saved: [PackageURL]? = nil
+        Current.fileManager.createFile = { path, data, _ in
+            guard path.hasSuffix("package.json") else { return false }
+            guard let data = data else {
+                XCTFail("data must not be nil")
+                return false
+            }
+            guard let list = try? JSONDecoder().decode([PackageURL].self, from: data) else {
+                XCTFail("decoding of output failed")
+                return false
+            }
+            saved = list
+            return true
+        }
+        Current.fetchRepository = { _, url in throw Error.unexpectedCall }
+        Current.fetch = { client, url in
+            client.eventLoopGroup.next().makeFailedFuture(Error.unexpectedCall)
+        }
+        check.packageUrls = [.p2] // p1 not in input list - it's been removed by CheckRedirect
+        check.output = "package.json"
+
+        // MUT
+        try await check.run()
+
+        // validate
+        XCTAssertEqual(saved, [.p2])
+    }
+
 }
 
 
