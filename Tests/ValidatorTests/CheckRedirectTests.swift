@@ -28,7 +28,7 @@ final class CheckRedirectTests: XCTestCase {
                                                              verbose: true,
                                                              index: 0,
                                                              packageURL: .p1)
-        XCTAssertEqual(res, .p2)
+        XCTAssertEqual(res, .add(.p2))
     }
 
     func test_process_existing_redirect() async throws {
@@ -40,7 +40,7 @@ final class CheckRedirectTests: XCTestCase {
                                                              verbose: true,
                                                              index: 0,
                                                              packageURL: .p1)
-        XCTAssertEqual(res, nil)
+        XCTAssertEqual(res, .remove(.p1))
     }
 
 }
