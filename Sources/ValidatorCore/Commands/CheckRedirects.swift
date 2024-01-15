@@ -32,11 +32,8 @@ extension Validator {
         @Option(name: .long, help: "start processing URLs from <offset>")
         var offset: Int = 0
 
-        @Option(name: .shortAndLong, help: "output file for added packages")
-        var outputAdded: String?
-
-        @Option(name: .shortAndLong, help: "output file for removed packages")
-        var outputRemoved: String?
+        @Option(name: .shortAndLong, help: "save changes to output file")
+        var output: String?
 
         @Flag(name: .long, help: "check redirects of canonical package list")
         var usePackageList = false
@@ -74,34 +71,10 @@ extension Validator {
 
         static var normalizedPackageURLs = NormalizedPackageURLs(inputURLs: [])
 
-        enum Change: Equatable {
-            case add(PackageURL)
-            case keep(PackageURL)
-            case remove(PackageURL)
-
-            var added: PackageURL? {
-                switch self {
-                    case let .add(url):
-                        return url
-                    case .keep, .remove:
-                        return nil
-                }
-            }
-
-            var removed: PackageURL? {
-                switch self {
-                    case let .remove(url):
-                        return url
-                    case .add, .keep:
-                        return nil
-                }
-            }
-        }
-
         static func process(redirect: Redirect,
                             verbose: Bool,
                             index: Int,
-                            packageURL: PackageURL) async throws -> Change {
+                            packageURL: PackageURL) async throws -> PackageURL? {
             if verbose || index % 50 == 0 {
                 print("package \(index) ...")
                 fflush(stdout)
@@ -111,29 +84,29 @@ extension Validator {
                     if verbose {
                         print("        \(packageURL.absoluteString)")
                     }
-                    return .keep(packageURL)
+                    return packageURL
                 case let .error(error):
                     print("ERROR: \(packageURL.absoluteString) \(error) (ignored, keeping package)")
                     // don't skip packages that have unrecognised errors
-                    return .keep(packageURL)
+                    return packageURL
                 case .notFound:
                     print("package \(index) ...")
                     print("NOT FOUND: \(packageURL.absoluteString) (deleting package)")
-                    return .remove(packageURL)
+                    return nil
                 case .rateLimited:
                     fatalError("rate limited - should have been retried at a lower level")
                 case .redirected(let url):
                     if await normalizedPackageURLs.insert(url).inserted {
                         print("ADD \(packageURL) -> \(url) (new)")
-                        return .add(url)
+                        return url
                     } else {
                         print("DELETE \(packageURL) -> \(url) (exists)")
-                        return .remove(packageURL)
+                        return nil
                     }
                 case .unauthorized:
                     print("package \(index) ...")
                     print("UNAUTHORIZED: \(packageURL.absoluteString) (deleting package)")
-                    return .remove(packageURL)
+                    return nil
             }
         }
 
@@ -166,7 +139,7 @@ extension Validator {
 
             let semaphore = Semaphore(maximum: concurrency ?? 1)
 
-            let changes = try await withThrowingTaskGroup(of: Change.self) { group in
+            let updated = try await withThrowingTaskGroup(of: PackageURL?.self) { group in
                 for (index, packageURL) in inputURLs[offset...]
                     .prefix(prefix)
                     .chunk(index: chunk, of: numberOfChunks)
@@ -195,16 +168,16 @@ extension Validator {
                         return res
                     }
                 }
-                return try await group.reduce(into: [], { res, next in res.append(next) })
+                return try await group
+                    .compactMap { $0 }
+                    .reduce(into: [], { res, next in res.append(next) })
+                    .sorted(by: { $0.lowercased() < $1.lowercased() })
             }
 
-            if let path = outputAdded {
-                try Current.fileManager.saveList(changes.compactMap(\.added), path: path)
-            }
-
-            if let path = outputRemoved {
-                try Current.fileManager.saveList(changes.compactMap(\.removed), path: path)
+            if let path = output {
+                try Current.fileManager.saveList(updated, path: path)
             }
         }
     }
 }
+
