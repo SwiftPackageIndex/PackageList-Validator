@@ -113,8 +113,7 @@ public struct CheckDependencies: AsyncParsableCommand {
         }
 
         // merge with existing and sort result
-        let merged = (Array(packageList.map(\.packageURL)) + Array(newPackages.map(\.value.packageURL)))
-            .sorted()
+        let merged = (packageList.map(\.packageURL) + newPackages.map(\.packageURL)).sorted()
 
         print("Total:", merged.count)
 
