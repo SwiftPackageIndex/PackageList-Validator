@@ -37,6 +37,19 @@ extension UniqueCanonicalPackageURLs {
         let res = insert(.init(newMember, transform: \.canonicalPath))
         return (res.inserted, res.memberAfterInsert.value)
     }
+
+    init(_ urls: [PackageURL]) {
+        self = Set(urls.map(\.canonicalPackageURL).map { .init($0, transform: \.canonicalPath) })
+    }
+
+    func sorted() -> [PackageURL] {
+        map(\.packageURL).sorted()
+    }
 }
 
 
+extension [PackageURL] {
+    func sorted() -> Self {
+        sorted(by: { $0.lowercased() < $1.lowercased() })
+    }
+}

@@ -45,14 +45,16 @@ public struct CheckDependencies: AsyncParsableCommand {
         let start = Date()
         defer { print("Elapsed (/min):", Date().timeIntervalSince(start)/60) }
 
+        let packageList = UniqueCanonicalPackageURLs(try inputSource.packageURLs())
+
         // fetch all dependencies
         let api = SwiftPackageIndexAPI(baseURL: apiBaseURL, apiToken: spiApiToken)
         let records = try await Current.fetchDependencies(api)
-        let serverPackages = records.allPackages
-        print("Total packages (server):", serverPackages.count)
+        print("Total packages (server):", records.count)
+        print("Total packages (input):", packageList.count)
 
         let allDependencies = records.allDependencies
-        let missing = allDependencies.subtracting(serverPackages)
+        let missing = allDependencies.subtracting(packageList)
         print("Not indexed:", missing.count)
 
         let client = HTTPClient(eventLoopGroupProvider: .singleton,
@@ -80,7 +82,7 @@ public struct CheckDependencies: AsyncParsableCommand {
                 print("  ... redirected to:", resolved)
             }
 
-            if serverPackages.contains(resolved.canonicalPackageURL) {
+            if packageList.contains(resolved.canonicalPackageURL) {
                 print("  ... ⛔ already indexed")
                 continue
             }
@@ -105,21 +107,13 @@ public struct CheckDependencies: AsyncParsableCommand {
 
         print("New packages:", newPackages.count)
         for (idx, p) in newPackages
-            .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
+            .sorted()
             .enumerated() {
-            print("  ✅ ADD", idx, p.packageURL)
+            print("  ✅ ADD", idx, p)
         }
 
         // merge with existing and sort result
-#warning("This is a temporary fix!")
-        let packageList = try inputSource.packageURLs()
-        let server = serverPackages.map(\.packageURL)
-        let deleted = Set(server).subtracting(packageList)
-        let merged = Array(newPackages.map(\.value.packageURL))
-            .mergingWithExisting(urls: server)
-            .mergingWithExisting(urls: packageList)
-            .filter { !deleted.contains($0) }
-            .sorted(by: { $0.lowercased() < $1.lowercased() })
+        let merged = (packageList.map(\.packageURL) + newPackages.map(\.packageURL)).sorted()
 
         print("Total:", merged.count)
 
@@ -166,12 +160,6 @@ extension CheckDependencies {
 
 
 extension [SwiftPackageIndexAPI.PackageRecord] {
-    var allPackages: UniqueCanonicalPackageURLs {
-        Set(
-            map { HashedCanonicalPackageURL($0.url) }
-        )
-    }
-
     var allDependencies: UniqueCanonicalPackageURLs {
         let deps = flatMap { $0.resolvedDependencies ?? [] }
         return Set(

@@ -21,16 +21,6 @@ import CanonicalPackageURL
 
 final class ExtensionsTests: XCTestCase {
 
-    func test_allPackages() throws {
-        let records: [SwiftPackageIndexAPI.PackageRecord] = [
-            .init(.p1, [.p3]),
-            .init(.p2, [.p4]),
-            .init(.p3, [.p2, .p4, .p5]),
-        ]
-        XCTAssertEqual(records.allPackages.sorted(by: { $0.canonicalPath < $1.canonicalPath }).map(\.path),
-                       [CanonicalPackageURL.p1, .p2, .p3].map(\.path))
-    }
-
     func test_allDependencies() throws {
         let records: [SwiftPackageIndexAPI.PackageRecord] = [
             .init(.p1, [.p3]),
@@ -47,7 +37,7 @@ final class ExtensionsTests: XCTestCase {
             .init(.p1, []),
             .init(.p2, [p1_prime, .p3]),
         ]
-        let missing = records.allDependencies.subtracting(records.allPackages)
+        let missing = records.allDependencies.subtracting(.init([.p1, .p2]))
         XCTAssertEqual(missing.count, 1)
         XCTAssertEqual(missing.first?.canonicalPath, CanonicalPackageURL.p3.canonicalPath)
     }
