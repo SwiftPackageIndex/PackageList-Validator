@@ -89,8 +89,7 @@ public struct CheckDependencies: AsyncParsableCommand {
 
             do {  // run package dump to validate
                 let repo = try await Current.fetchRepository(client, resolved)
-                let manifest = try await Package.getManifestURL(client: client, repository: repo)
-                _ = try Current.decodeManifest(manifest)
+                _ = try await Current.decodeManifest(client, repo)
             } catch {
                 print("  ... ⛔ \(error)")
                 continue

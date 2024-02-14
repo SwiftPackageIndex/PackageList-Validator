@@ -134,12 +134,12 @@ extension Github {
     static var repositoryCache = Cache<Repository>()
 
 
-    static func fetchRepository(client: HTTPClient, url: PackageURL) async throws-> Repository {
+    static func fetchRepository(client: Client, url: PackageURL) async throws-> Repository {
         try await fetchRepository(client: client, url: url, attempt: 0)
     }
 
 
-    static func fetchRepository(client: HTTPClient, url: PackageURL, attempt: Int) async throws-> Repository {
+    static func fetchRepository(client: Client, url: PackageURL, attempt: Int) async throws-> Repository {
         guard attempt < 3 else { throw AppError.retryLimitExceeded }
         let apiURL = URL(string: "https://api.github.com/repos/\(url.owner)/\(url.repository)")!
         let key = Cache<Repository>.Key(string: apiURL.absoluteString)
@@ -158,7 +158,7 @@ extension Github {
     }
 
 
-    static func listRepositoryFilePaths(client: HTTPClient, repository: Repository) async throws -> [String] {
+    static func listRepositoryFilePaths(client: Client, repository: Repository) async throws -> [String] {
         let apiURL = URL( string: "https://api.github.com/repos/\(repository.path)/git/trees/\(repository.defaultBranch)" )!
         struct Response: Decodable {
             var tree: [File]
@@ -180,7 +180,7 @@ extension Github {
     }
 
 
-    static func fetch<T: Decodable>(_ type: T.Type, client: HTTPClient, url: URL) async throws -> T {
+    static func fetch<T: Decodable>(_ type: T.Type, client: Client, url: URL) async throws -> T {
         let body = try await Current.fetch(client, url).get()
         do {
             return try JSONDecoder().decode(type, from: body)
@@ -192,7 +192,7 @@ extension Github {
         }
     }
 
-    static func fetch(client: HTTPClient, url: URL) -> EventLoopFuture<ByteBuffer> {
+    static func fetch(client: Client, url: URL) -> EventLoopFuture<ByteBuffer> {
         let eventLoop = client.eventLoopGroup.next()
         guard let token = Current.githubToken() else {
             return eventLoop.makeFailedFuture(AppError.githubTokenNotSet)
