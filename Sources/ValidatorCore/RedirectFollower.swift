@@ -46,12 +46,12 @@ enum Redirect: Equatable {
 }
 
 
-private func resolveRedirects(client: HTTPClient, for url: PackageURL) async throws -> Redirect {
+private func resolveRedirects(client: Client, for url: PackageURL) async throws -> Redirect {
     var lastResult = Redirect.initial(url)
     var hopCount = 0
     let maxHops = 10
 
-    func _resolveRedirects(client: HTTPClient, for url: PackageURL) async throws -> Redirect {
+    func _resolveRedirects(client: Client, for url: PackageURL) async throws -> Redirect {
         var request = try HTTPClient.Request(url: url.rawValue, method: .HEAD, headers: .init([
             ("User-Agent", "SPI-Validator")
         ]))
@@ -103,7 +103,7 @@ private func resolveRedirects(client: HTTPClient, for url: PackageURL) async thr
 }
 
 
-func resolvePackageRedirects(client: HTTPClient, for url: PackageURL) async throws -> Redirect {
+func resolvePackageRedirects(client: Client, for url: PackageURL) async throws -> Redirect {
     let res = try await resolveRedirects(client: client, for: url.deletingGitExtension())
     switch res {
         case .initial, .notFound, .error, .unauthorized, .rateLimited:

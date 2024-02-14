@@ -19,13 +19,13 @@ import NIO
 
 
 struct Environment {
-    var decodeManifest: (_ client: HTTPClient, _ repository: Github.Repository) async throws -> Package
+    var decodeManifest: (_ client: Client, _ repository: Github.Repository) async throws -> Package
     var fileManager: FileManager
-    var fetch: (_ client: HTTPClient, _ url: URL) -> EventLoopFuture<ByteBuffer>
+    var fetch: (_ client: Client, _ url: URL) -> EventLoopFuture<ByteBuffer>
     var fetchDependencies: (_ api: SwiftPackageIndexAPI) async throws -> [SwiftPackageIndexAPI.PackageRecord]
-    var fetchRepository: (_ client: HTTPClient, _ url: PackageURL) async throws -> Github.Repository
+    var fetchRepository: (_ client: Client, _ url: PackageURL) async throws -> Github.Repository
     var githubToken: () -> String?
-    var resolvePackageRedirects: (_ client: HTTPClient, _ url: PackageURL) async throws -> Redirect
+    var resolvePackageRedirects: (_ client: Client, _ url: PackageURL) async throws -> Redirect
     var shell: Shell
 }
 
@@ -53,6 +53,19 @@ extension Environment {
         shell: .mock
     )
 }
+
+
+protocol Client {
+    var eventLoopGroup: EventLoopGroup { get }
+    func execute(request: HTTPClient.Request, deadline: NIODeadline?) -> EventLoopFuture<HTTPClient.Response>
+}
+extension Client {
+    func execute(request: HTTPClient.Request) -> EventLoopFuture<HTTPClient.Response> {
+        execute(request: request, deadline: nil)
+    }
+}
+
+extension HTTPClient: Client { }
 
 
 #if DEBUG

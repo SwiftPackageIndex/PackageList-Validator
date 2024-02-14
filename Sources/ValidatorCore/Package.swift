@@ -86,7 +86,7 @@ extension Package {
     static func loadPackageDumpCache() { packageDumpCache = .load(from: cacheFilename) }
     static func savePackageDumpCache() throws { try packageDumpCache.save(to: cacheFilename) }
 
-    static func decode(client: HTTPClient, repository: Github.Repository) async throws -> Self {
+    static func decode(client: Client, repository: Github.Repository) async throws -> Self {
         let cacheKey = repository.path
         if let cached = packageDumpCache[Cache.Key(string: cacheKey)] {
             return cached
@@ -94,7 +94,10 @@ extension Package {
         return try await withTempDir { tempDir in
             for manifestURL in try await Package.getManifestURLs(client: client, repository: repository) {
                 let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent(manifestURL.lastPathComponent)
-                let data = try Data(contentsOf: manifestURL.rawValue)
+                let buffer = try await Current.fetch(client, manifestURL.rawValue).get()
+                guard let data = buffer.getData(at: 0, length: buffer.readableBytes) else {
+                    throw AppError.dumpPackageError("failed to get data for manifest \(manifestURL.rawValue.absoluteString)")
+                }
                 guard Current.fileManager.createFile(fileURL.path, data, nil) else {
                     throw AppError.dumpPackageError("failed to save manifest \(manifestURL.rawValue.absoluteString) to temp directory \(fileURL.absoluteString)")
                 }
@@ -121,7 +124,7 @@ extension Package {
     enum Manifest {}
     typealias ManifestURL = Tagged<Manifest, URL>
 
-    static func getManifestURLs(client: HTTPClient, repository: Github.Repository) async throws -> [ManifestURL] {
+    static func getManifestURLs(client: Client, repository: Github.Repository) async throws -> [ManifestURL] {
         let manifestFiles = try await Github.listRepositoryFilePaths(client: client, repository: repository)
           .filter { $0.hasPrefix("Package") }
           .filter { $0.hasSuffix(".swift") }

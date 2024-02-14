@@ -224,26 +224,3 @@ private extension SwiftPackageIndexAPI.PackageRecord {
         self.init(id: .init(), url: url, resolvedDependencies: dependencies)
     }
 }
-
-private extension Data {
-    static func listRepositoryFilePaths(for path: String) -> Self {
-        .init("""
-            {
-              "url" : "https://api.github.com/repos/\(path)/git/trees/ea8eea9d89842a29af1b8e6c7677f1c86e72fa42",
-              "tree" : [
-                {
-                  "size" : 1122,
-                  "type" : "blob",
-                  "path" : "Package.swift",
-                  "url" : "https://api.github.com/repos/\(path)/git/blobs/bf4aa0c6a8bd9f749c2f96905c40bf2f70ef97d2",
-                  "mode" : "100644",
-                  "sha" : "bf4aa0c6a8bd9f749c2f96905c40bf2f70ef97d2"
-              }
-              ],
-              "sha" : "ea8eea9d89842a29af1b8e6c7677f1c86e72fa42",
-              "truncated" : false
-            }
-            """.utf8
-        )
-    }
-}

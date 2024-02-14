@@ -13,12 +13,24 @@
 // limitations under the License.
 
 import Foundation
+import NIO
 
 
 func fixtureData(for fixture: String) throws -> Data {
     try Data(contentsOf: fixtureUrl(for: fixture))
 }
 
+extension Data {
+    static func fixture(for fileName: String) throws -> Self {
+        try fixtureData(for: fileName)
+    }
+}
+
+extension ByteBuffer {
+    static func fixture(for fileName: String) throws -> Self {
+        try .init(data: .fixture(for: fileName))
+    }
+}
 
 func fixtureUrl(for fixture: String) -> URL {
     fixturesDirectory().appendingPathComponent(fixture)
