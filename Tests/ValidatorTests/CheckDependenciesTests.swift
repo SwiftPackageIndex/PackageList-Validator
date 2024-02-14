@@ -64,20 +64,9 @@ final class CheckDependenciesTests: XCTestCase {
                 throw Error.unexpectedCall
             }
         }
-        Current.fetch = { client, url in
-            // getManifestURL -> Github.listRepositoryFilePaths -> Github.fetch
-            guard url.absoluteString == "https://api.github.com/repos/org/3/git/trees/main" else {
-                return client.eventLoopGroup.next().makeFailedFuture(Error.unexpectedCall)
-            }
-            return client.eventLoopGroup.next().makeSucceededFuture(
-                ByteBuffer(data: .listRepositoryFilePaths(for: "org/3"))
-            )
-        }
         var decodeCalled = false
-        Current.decodeManifest = { url in
-            guard url.absoluteString == "https://raw.githubusercontent.com/org/3/main/Package.swift" else {
-                throw Error.unexpectedCall
-            }
+        Current.decodeManifest = { _, repo in
+            guard repo.path == "org/3" else { throw Error.unexpectedCall }
             decodeCalled = true
             return .init(name: "3", products: [], dependencies: [])
         }
@@ -122,19 +111,8 @@ final class CheckDependenciesTests: XCTestCase {
                 throw Error.unexpectedCall
             }
         }
-        Current.fetch = { client, url in
-            // getManifestURL -> Github.listRepositoryFilePaths -> Github.fetch
-            guard url.absoluteString == "https://api.github.com/repos/org/3/git/trees/main" else {
-                return client.eventLoopGroup.next().makeFailedFuture(Error.unexpectedCall)
-            }
-            return client.eventLoopGroup.next().makeSucceededFuture(
-                ByteBuffer(data: .listRepositoryFilePaths(for: "org/3"))
-            )
-        }
-        Current.decodeManifest = { url in
-            guard url.absoluteString == "https://raw.githubusercontent.com/org/3/main/Package.swift" else {
-                throw Error.unexpectedCall
-            }
+        Current.decodeManifest = { _, repo in
+            guard repo.path == "org/3" else { throw Error.unexpectedCall }
             return .init(name: "3", products: [], dependencies: [])
         }
         check.packageUrls = [.p1, .p2, .p4]
@@ -170,19 +148,7 @@ final class CheckDependenciesTests: XCTestCase {
                 throw Error.unexpectedCall
             }
         }
-        Current.fetch = { client, url in
-            // getManifestURL -> Github.listRepositoryFilePaths -> Github.fetch
-            guard url.absoluteString == "https://api.github.com/repos/org/3/git/trees/main" else {
-                return client.eventLoopGroup.next().makeFailedFuture(Error.unexpectedCall)
-            }
-            return client.eventLoopGroup.next().makeSucceededFuture(
-                ByteBuffer(data: .listRepositoryFilePaths(for: "org/3"))
-            )
-        }
-        Current.decodeManifest = { url in
-            guard url.absoluteString == "https://raw.githubusercontent.com/org/3/main/Package.swift" else {
-                throw Error.unexpectedCall
-            }
+        Current.decodeManifest = { _, repo in
             // simulate a bad manifest
             throw AppError.dumpPackageError("simulated decoding error")
         }

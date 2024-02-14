@@ -86,15 +86,18 @@ extension Package {
     static func loadPackageDumpCache() { packageDumpCache = .load(from: cacheFilename) }
     static func savePackageDumpCache() throws { try packageDumpCache.save(to: cacheFilename) }
 
-    static func decode(from manifestURL: ManifestURL) throws -> Package {
-        if let cached = packageDumpCache[Cache.Key(string: manifestURL.rawValue.absoluteString)] {
+    static func decode(client: HTTPClient, repository: Github.Repository) async throws -> Self {
+        let cacheKey = repository.path
+        if let cached = packageDumpCache[Cache.Key(string: cacheKey)] {
             return cached
         }
-        return try withTempDir { tempDir in
-            let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent("Package.swift")
-            let data = try Data(contentsOf: manifestURL.rawValue)
-            guard Current.fileManager.createFile(fileURL.path, data, nil) else {
-                throw AppError.dumpPackageError("failed to save manifest \(manifestURL.rawValue.absoluteString) to temp directory \(fileURL.absoluteString)")
+        return try await withTempDir { tempDir in
+            for manifestURL in try await Package.getManifestURLs(client: client, repository: repository) {
+                let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent(manifestURL.lastPathComponent)
+                let data = try Data(contentsOf: manifestURL.rawValue)
+                guard Current.fileManager.createFile(fileURL.path, data, nil) else {
+                    throw AppError.dumpPackageError("failed to save manifest \(manifestURL.rawValue.absoluteString) to temp directory \(fileURL.absoluteString)")
+                }
             }
             do {
                 guard let pkgJSON = try Current.shell.run(command: .packageDump, at: tempDir)
@@ -102,7 +105,7 @@ extension Package {
                     throw AppError.dumpPackageError("package dump did not return data")
                 }
                 let pkg = try JSONDecoder().decode(Package.self, from: pkgJSON)
-                packageDumpCache[Cache.Key(string: manifestURL.rawValue.absoluteString)] = pkg
+                packageDumpCache[Cache.Key(string: cacheKey)] = pkg
                 return pkg
             } catch let error as ShellOutError {
                 throw AppError.dumpPackageError("package dump failed: \(error.message)")
@@ -118,16 +121,15 @@ extension Package {
     enum Manifest {}
     typealias ManifestURL = Tagged<Manifest, URL>
 
-    static func getManifestURL(client: HTTPClient, repository: Github.Repository) async throws -> ManifestURL {
+    static func getManifestURLs(client: HTTPClient, repository: Github.Repository) async throws -> [ManifestURL] {
         let manifestFiles = try await Github.listRepositoryFilePaths(client: client, repository: repository)
           .filter { $0.hasPrefix("Package") }
           .filter { $0.hasSuffix(".swift") }
           .sorted()
-        guard let manifestFile = manifestFiles.last else {
-            throw AppError.manifestNotFound(owner: repository.owner.login, name: repository.name)
-        }
-        let url = URL(string: "https://raw.githubusercontent.com/\(repository.path)/\(repository.defaultBranch)/\(manifestFile)")!
-        return .init(rawValue: url)
+        guard !manifestFiles.isEmpty else { throw AppError.manifestNotFound(owner: repository.owner.login, name: repository.name) }
+        return manifestFiles
+            .map { URL(string: "https://raw.githubusercontent.com/\(repository.path)/\(repository.defaultBranch)/\($0)")! }
+            .map(ManifestURL.init(rawValue:))
     }
 
 }

@@ -86,11 +86,11 @@ final class ValidatorTests: XCTestCase {
         let repo = Github.Repository(defaultBranch: "main", owner: "SwiftPackageIndex", name: "SemanticVersion")
 
         // MUT
-        let url = try await Package.getManifestURL(client: client, repository: repo)
+        let url = try await Package.getManifestURLs(client: client, repository: repo)
 
         // validate
         XCTAssertEqual(url,
-                       .init("https://raw.githubusercontent.com/SwiftPackageIndex/SemanticVersion/main/Package.swift"))
+                       [.init("https://raw.githubusercontent.com/SwiftPackageIndex/SemanticVersion/main/Package.swift")])
     }
 
     func test_getManifestURL_multiple() async throws {
@@ -105,11 +105,14 @@ final class ValidatorTests: XCTestCase {
         let repo = Github.Repository(defaultBranch: "master", owner: "IBM-Swift", name: "SwiftyJSON")
 
         // MUT
-        let url = try await Package.getManifestURL(client: client, repository: repo)
+        let url = try await Package.getManifestURLs(client: client, repository: repo)
 
         // validate
         XCTAssertEqual(url,
-                       .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-5.swift"))
+                       [.init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package.swift"),
+                        .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-4.2.swift"),
+                        .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-4.swift"),
+                        .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-5.swift")])
     }
 
     func test_ArraySlice_chunk() throws {

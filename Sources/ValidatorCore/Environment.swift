@@ -19,7 +19,7 @@ import NIO
 
 
 struct Environment {
-    var decodeManifest: (_ url: Package.ManifestURL) throws -> Package
+    var decodeManifest: (_ client: HTTPClient, _ repository: Github.Repository) async throws -> Package
     var fileManager: FileManager
     var fetch: (_ client: HTTPClient, _ url: URL) -> EventLoopFuture<ByteBuffer>
     var fetchDependencies: (_ api: SwiftPackageIndexAPI) async throws -> [SwiftPackageIndexAPI.PackageRecord]
@@ -32,7 +32,7 @@ struct Environment {
 
 extension Environment {
     static let live: Self = .init(
-        decodeManifest: { url in try Package.decode(from: url) },
+        decodeManifest: { client, repo in try await Package.decode(client: client, repository: repo) },
         fileManager: .live,
         fetch: Github.fetch(client:url:),
         fetchDependencies: { try await $0.fetchDependencies() },
@@ -43,7 +43,7 @@ extension Environment {
     )
 
     static let mock: Self = .init(
-        decodeManifest: { _ in fatalError("not implemented") },
+        decodeManifest: { _, _ in fatalError("not implemented") },
         fileManager: .mock,
         fetch: { client, _ in client.eventLoopGroup.next().makeFailedFuture(AppError.runtimeError("unimplemented")) },
         fetchDependencies: { _ in [] },
