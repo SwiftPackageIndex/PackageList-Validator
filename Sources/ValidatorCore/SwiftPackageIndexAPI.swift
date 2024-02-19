@@ -14,9 +14,6 @@
 
 
 import Foundation
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
 
 import CanonicalPackageURL
 
@@ -58,37 +55,3 @@ extension SwiftPackageIndexAPI {
         return try Self.decoder.decode([PackageRecord].self, from: data)
     }
 }
-
-
-#if os(Linux)
-enum URLSessionErrors: Error {
-    case invalidUrlResponse, missingResponseData
-}
-
-extension URLSession {
-    func data(for request: URLRequest, delegate: (URLSessionTaskDelegate)? = nil) async throws -> (Data, URLResponse) {
-        try await withCheckedThrowingContinuation { continuation in
-            let task = self.dataTask(with: request) { data, response, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                guard let response = response as? HTTPURLResponse else {
-                    continuation.resume(throwing: URLSessionErrors.invalidUrlResponse)
-                    return
-                }
-                guard let data = data else {
-                    continuation.resume(throwing: URLSessionErrors.missingResponseData)
-                    return
-                }
-                continuation.resume(returning: (data, response))
-            }
-            task.resume()
-        }
-    }
-
-    func data(from url: URL) async throws -> (Data, URLResponse) {
-        try await data(for: URLRequest(url: url))
-    }
-}
-#endif
