@@ -139,7 +139,7 @@ extension Validator {
 
             let semaphore = Semaphore(maximum: concurrency ?? 1)
 
-            let updated = try await withThrowingTaskGroup(of: PackageURL?.self) { group in
+            let updated = await withTaskGroup(of: PackageURL?.self) { group in
                 for (index, packageURL) in inputURLs[offset...]
                     .prefix(prefix)
                     .chunk(index: chunk, of: numberOfChunks)
@@ -147,28 +147,33 @@ extension Validator {
                     await semaphore.increment()
                     try? await semaphore.waitForAvailability()
                     group.addTask {
-                        let index = index + offset
-                        let redirect = try await resolvePackageRedirects(client: httpClient, for: packageURL)
-
-                        if index % 100 == 0, let token = Current.githubToken() {
-                            let rateLimit = try await Github.getRateLimit(client: httpClient, token: token).get()
-                            if rateLimit.remaining < 200 {
-                                print("Rate limit remaining: \(rateLimit.remaining)")
-                                print("Sleeping until reset at \(rateLimit.resetDate) ...")
-                                sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
+                        do {
+                            let index = index + offset
+                            let redirect = try await resolvePackageRedirects(client: httpClient, for: packageURL)
+                            
+                            if index % 100 == 0, let token = Current.githubToken() {
+                                let rateLimit = try await Github.getRateLimit(client: httpClient, token: token).get()
+                                if rateLimit.remaining < 200 {
+                                    print("Rate limit remaining: \(rateLimit.remaining)")
+                                    print("Sleeping until reset at \(rateLimit.resetDate) ...")
+                                    sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
+                                }
                             }
+                            
+                            let res =  try await Self.process(redirect: redirect,
+                                                              verbose: verbose,
+                                                              index: index,
+                                                              packageURL: packageURL)
+                            
+                            await semaphore.decrement()
+                            return res
+                        } catch {
+                            print("Error in main task group: \(error)")
+                            return nil
                         }
-
-                        let res =  try await Self.process(redirect: redirect,
-                                                          verbose: verbose,
-                                                          index: index,
-                                                          packageURL: packageURL)
-
-                        await semaphore.decrement()
-                        return res
                     }
                 }
-                return try await group
+                return await group
                     .compactMap { $0 }
                     .reduce(into: [], { res, next in res.append(next) })
                     .sorted(by: { $0.lowercased() < $1.lowercased() })
