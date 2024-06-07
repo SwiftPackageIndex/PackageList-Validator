@@ -34,7 +34,7 @@ final class PackageTests: XCTestCase {
         var manifestsFetched = 0
         Current.fetch = { client, url in
             switch url.absoluteString {
-                case "https://raw.githubusercontent.com/org/1/main/Package@swift-5.swift":
+                case "https://raw.githubusercontent.com/org/1/main/Package@swift-6.swift":
                     // Package.decode -> fetch manifestURL data
                     manifestsFetched += 1
                     return client.eventLoopGroup.next().makeSucceededFuture(
