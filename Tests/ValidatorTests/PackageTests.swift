@@ -25,16 +25,16 @@ final class PackageTests: XCTestCase {
 
     func test_decode_multiple_manifests() async throws {
         // This tests package dump for a package with four versioned package manifest files.
-        // We use a captured response for the SwiftyJSON package which lists four manifest files
-        // and then save no data for three of them that shouldn't be used and mock in the
-        // SemanticVersion manifest files for the one that should be decoded.
+        // We use a captured response for a package which lists four manifest files.
+        // For three of them that shouldn't be used we send no data when they are fetched.
+        // We mock in the SemanticVersion manifest file for the one that should be decoded.
         // setup
         Current = .mock
         Current.fileManager = .live
         var manifestsFetched = 0
         Current.fetch = { client, url in
             switch url.absoluteString {
-                case "https://raw.githubusercontent.com/org/1/main/Package@swift-5.swift":
+                case "https://raw.githubusercontent.com/org/1/main/Package@swift-6.swift":
                     // Package.decode -> fetch manifestURL data
                     manifestsFetched += 1
                     return client.eventLoopGroup.next().makeSucceededFuture(
@@ -51,8 +51,7 @@ final class PackageTests: XCTestCase {
                 case "https://api.github.com/repos/org/1/git/trees/main":
                     // getManifestURLs -> Github.listRepositoryFilePaths -> Github.fetch
                     return client.eventLoopGroup.next().makeSucceededFuture(
-                        // github-files-response-SwiftyJSON has multiple manifest files
-                        try! .fixture(for: "github-files-response-SwiftyJSON.json")
+                        try! .fixture(for: "github-files-response-multiple-manifests.json")
                     )
                 default:
                     return client.eventLoopGroup.next().makeFailedFuture(
