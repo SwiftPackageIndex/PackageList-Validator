@@ -27,7 +27,7 @@ jobs:
   swift-test-Linux:
     runs-on: ubuntu-latest
     container:
-      image: swiftlang/swift@sha256:30154112a700a5a95fd1760716bd2040e8b735f54f081a4865823abdec67d17e  # swiftlang/swift:nightly-6.0-jammy as of May 26
+      image: swift:6.0.1-jammy
     steps:
       - name: Get swift version
         run: swift --version
@@ -41,7 +41,7 @@ jobs:
   end-to-end-test-Linux:
     runs-on: ubuntu-latest
     container:
-      image: swiftlang/swift@sha256:30154112a700a5a95fd1760716bd2040e8b735f54f081a4865823abdec67d17e  # swiftlang/swift:nightly-6.0-jammy as of May 26
+      image: swift:6.0.1-jammy
     steps:
       - name: Get swift version
         run: swift --version
