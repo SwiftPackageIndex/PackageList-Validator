@@ -86,6 +86,14 @@ private func resolveRedirects(client: Client, for url: PackageURL) async throws 
                     print("Sleeping for \(delay)s ...")
                     try await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
                     return try await _resolveRedirects(client: client, for: url)
+                case 502: // bad gateway, https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/3734
+                    // increment hopCount as a way to limit the number of retries (even though it's
+                    // not a true "hop")
+                    hopCount += 1
+                    let delay: UInt64 = 3
+                    print("Sleeping for \(delay)s ...")
+                    try await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
+                    return try await _resolveRedirects(client: client, for: url)
                 default:
                     throw AppError.runtimeError("unexpected status '\(response.status.code)' for url: \(url.absoluteString)")
             }
