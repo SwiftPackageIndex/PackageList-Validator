@@ -46,15 +46,17 @@ enum Redirect: Equatable {
 }
 
 
-private func resolveRedirects(client: Client, for url: PackageURL) async throws -> Redirect {
+private func resolveRedirects(client: Client, for url: PackageURL) async -> Redirect {
     var lastResult = Redirect.initial(url)
     var hopCount = 0
     let maxHops = 10
 
-    func _resolveRedirects(client: Client, for url: PackageURL) async throws -> Redirect {
-        var request = try HTTPClient.Request(url: url.rawValue, method: .HEAD, headers: .init([
+    func _resolveRedirects(client: Client, for url: PackageURL) async -> Redirect {
+        guard var request = try? HTTPClient.Request(url: url.rawValue, method: .HEAD, headers: .init([
             ("User-Agent", "SPI-Validator")
-        ]))
+        ])) else {
+            return .error("Failed to create redirect request for \(url.rawValue)")
+        }
         if let token = Current.githubToken() {
             request.headers.add(name: "Authorization", value: "Bearer \(token)")
         }
@@ -75,7 +77,7 @@ private func resolveRedirects(client: Client, for url: PackageURL) async throws 
                     }
                     lastResult = .redirected(to: redirected)
                     hopCount += 1
-                    return try await _resolveRedirects(client: client, for: redirected)
+                    return await _resolveRedirects(client: client, for: redirected)
                 case 404:
                     return .notFound(url)
                 case 429:
@@ -85,7 +87,7 @@ private func resolveRedirects(client: Client, for url: PackageURL) async throws 
                         .flatMap(UInt64.init) ?? 60
                     print("Sleeping for \(delay)s ...")
                     try await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
-                    return try await _resolveRedirects(client: client, for: url)
+                    return await _resolveRedirects(client: client, for: url)
                 case 502: // bad gateway, https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/3734
                     // increment hopCount as a way to limit the number of retries (even though it's
                     // not a true "hop")
@@ -93,26 +95,28 @@ private func resolveRedirects(client: Client, for url: PackageURL) async throws 
                     let delay: UInt64 = 3
                     print("Sleeping for \(delay)s ...")
                     try await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
-                    return try await _resolveRedirects(client: client, for: url)
+                    return await _resolveRedirects(client: client, for: url)
                 default:
-                    throw AppError.runtimeError("unexpected status '\(response.status.code)' for url: \(url.absoluteString)")
+                    return .error("unexpected status '\(response.status.code)' for url: \(url.absoluteString)")
             }
         } catch let error as HTTPClientError where error == .remoteConnectionClosed {
             hopCount += 1
             let delay: UInt64 = 5
             print("CONNECTION CLOSED")
             print("retrying in \(delay)s ...")
-            try await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
-            return try await _resolveRedirects(client: client, for: url)
+            try? await Task.sleep(nanoseconds: NSEC_PER_SEC * delay)
+            return await _resolveRedirects(client: client, for: url)
+        } catch {
+            return .error("\(error)")
         }
     }
 
-    return try await _resolveRedirects(client: client, for: url)
+    return await _resolveRedirects(client: client, for: url)
 }
 
 
-func resolvePackageRedirects(client: Client, for url: PackageURL) async throws -> Redirect {
-    let res = try await resolveRedirects(client: client, for: url.deletingGitExtension())
+func resolvePackageRedirects(client: Client, for url: PackageURL) async -> Redirect {
+    let res = await resolveRedirects(client: client, for: url.deletingGitExtension())
     switch res {
         case .initial, .notFound, .error, .unauthorized, .rateLimited:
             return res

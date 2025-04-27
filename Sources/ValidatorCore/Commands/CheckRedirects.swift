@@ -149,7 +149,7 @@ extension Validator {
                     group.addTask {
                         do {
                             let index = index + offset
-                            let redirect = try await resolvePackageRedirects(client: httpClient, for: packageURL)
+                            let redirect = await resolvePackageRedirects(client: httpClient, for: packageURL)
                             
                             if index % 100 == 0, let token = Current.githubToken() {
                                 let rateLimit = try await Github.getRateLimit(client: httpClient, token: token).get()
