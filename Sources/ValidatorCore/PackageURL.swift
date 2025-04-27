@@ -46,7 +46,7 @@ extension PackageURL {
 }
 
 
-extension PackageURL: ExpressibleByArgument {
+extension PackageURL: @retroactive ExpressibleByArgument {
     public init?(argument: String) {
         guard let url = URL(string: argument) else { return nil }
         self.init(rawValue: url)
