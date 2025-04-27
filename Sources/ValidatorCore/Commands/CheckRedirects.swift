@@ -124,63 +124,61 @@ extension Validator {
             let verbose = verbose
             let inputURLs = try inputSource.packageURLs()
             let prefix = limit ?? inputURLs.count
-            let httpClient = HTTPClient(eventLoopGroupProvider: .singleton,
-                                        configuration: .init(redirectConfiguration: .disallow))
-            defer { try? httpClient.syncShutdown() }
+            try await HTTPClient.with(configuration: .init(redirectConfiguration: .disallow)) { httpClient in
+                let offset = min(offset, inputURLs.count - 1)
 
-            let offset = min(offset, inputURLs.count - 1)
+                print("Checking for redirects (\(prefix) packages) ...")
+                if let chunk = chunk, let numberOfChunks = numberOfChunks {
+                    print("Chunk \(chunk) of \(numberOfChunks)")
+                }
 
-            print("Checking for redirects (\(prefix) packages) ...")
-            if let chunk = chunk, let numberOfChunks = numberOfChunks {
-                print("Chunk \(chunk) of \(numberOfChunks)")
-            }
+                Self.normalizedPackageURLs = .init(inputURLs: inputURLs)
 
-            Self.normalizedPackageURLs = .init(inputURLs: inputURLs)
+                let semaphore = Semaphore(maximum: concurrency ?? 1)
 
-            let semaphore = Semaphore(maximum: concurrency ?? 1)
+                let updated = await withTaskGroup(of: PackageURL?.self) { group in
+                    for (index, packageURL) in inputURLs[offset...]
+                        .prefix(prefix)
+                        .chunk(index: chunk, of: numberOfChunks)
+                        .enumerated() {
+                        await semaphore.increment()
+                        try? await semaphore.waitForAvailability()
+                        group.addTask {
+                            do {
+                                let index = index + offset
+                                let redirect = await resolvePackageRedirects(client: httpClient, for: packageURL)
 
-            let updated = await withTaskGroup(of: PackageURL?.self) { group in
-                for (index, packageURL) in inputURLs[offset...]
-                    .prefix(prefix)
-                    .chunk(index: chunk, of: numberOfChunks)
-                    .enumerated() {
-                    await semaphore.increment()
-                    try? await semaphore.waitForAvailability()
-                    group.addTask {
-                        do {
-                            let index = index + offset
-                            let redirect = await resolvePackageRedirects(client: httpClient, for: packageURL)
-                            
-                            if index % 100 == 0, let token = Current.githubToken() {
-                                let rateLimit = try await Github.getRateLimit(client: httpClient, token: token).get()
-                                if rateLimit.remaining < 200 {
-                                    print("Rate limit remaining: \(rateLimit.remaining)")
-                                    print("Sleeping until reset at \(rateLimit.resetDate) ...")
-                                    sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
+                                if index % 100 == 0, let token = Current.githubToken() {
+                                    let rateLimit = try await Github.getRateLimit(client: httpClient, token: token).get()
+                                    if rateLimit.remaining < 200 {
+                                        print("Rate limit remaining: \(rateLimit.remaining)")
+                                        print("Sleeping until reset at \(rateLimit.resetDate) ...")
+                                        sleep(UInt32(rateLimit.secondsUntilReset + 0.5))
+                                    }
                                 }
+
+                                let res =  try await Self.process(redirect: redirect,
+                                                                  verbose: verbose,
+                                                                  index: index,
+                                                                  packageURL: packageURL)
+
+                                await semaphore.decrement()
+                                return res
+                            } catch {
+                                print("Error in main task group: \(error)")
+                                return nil
                             }
-                            
-                            let res =  try await Self.process(redirect: redirect,
-                                                              verbose: verbose,
-                                                              index: index,
-                                                              packageURL: packageURL)
-                            
-                            await semaphore.decrement()
-                            return res
-                        } catch {
-                            print("Error in main task group: \(error)")
-                            return nil
                         }
                     }
+                    return await group
+                        .compactMap { $0 }
+                        .reduce(into: [], { res, next in res.append(next) })
+                        .sorted(by: { $0.lowercased() < $1.lowercased() })
                 }
-                return await group
-                    .compactMap { $0 }
-                    .reduce(into: [], { res, next in res.append(next) })
-                    .sorted(by: { $0.lowercased() < $1.lowercased() })
-            }
 
-            if let path = output {
-                try Current.fileManager.saveList(updated, path: path)
+                if let path = output {
+                    try Current.fileManager.saveList(updated, path: path)
+                }
             }
         }
     }

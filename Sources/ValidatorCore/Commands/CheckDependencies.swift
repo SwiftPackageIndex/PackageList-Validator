@@ -57,72 +57,69 @@ public struct CheckDependencies: AsyncParsableCommand {
         let missing = allDependencies.subtracting(packageList)
         print("Not indexed:", missing.count)
 
-        let client = HTTPClient(eventLoopGroupProvider: .singleton,
-                                configuration: .init(redirectConfiguration: .disallow))
-        defer { try? client.syncShutdown() }
+        try await HTTPClient.with(configuration: .init(redirectConfiguration: .disallow)) { client in
+            var newPackages = UniqueCanonicalPackageURLs()
+            for (idx, dep) in missing
+                .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
+                .prefix(maxCheck)
+                .enumerated() {
+                if idx % 10 == 0 {
+                    print("Progress:", idx, "/", missing.count)
+                }
 
-        var newPackages = UniqueCanonicalPackageURLs()
-        for (idx, dep) in missing
-            .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
-            .prefix(maxCheck)
-            .enumerated() {
-            if idx % 10 == 0 {
-                print("Progress:", idx, "/", missing.count)
+                // resolve redirects
+                print("Processing:", dep.packageURL, "...")
+                guard let resolved = try? await Current.resolvePackageRedirects(client, dep.packageURL).url else {
+                    // TODO: consider adding retry for some errors
+                    print("  ... ⛔ redirect resolution returned nil")
+                    continue
+                }
+
+                if resolved.canonicalPackageURL.canonicalPath != dep.canonicalPath {
+                    print("  ... redirected to:", resolved)
+                }
+
+                if packageList.contains(resolved.canonicalPackageURL) {
+                    print("  ... ⛔ already indexed")
+                    continue
+                }
+
+                do {  // run package dump to validate
+                    let repo = try await Current.fetchRepository(client, resolved)
+                    _ = try await Current.decodeManifest(client, repo)
+                } catch {
+                    print("  ... ⛔ \(error)")
+                    continue
+                }
+
+                if newPackages.insert(resolved.appendingGitExtension().canonicalPackageURL).inserted {
+                    print("✅ ADD (\(newPackages.count)):", resolved.appendingGitExtension())
+                }
+                if newPackages.count >= limit {
+                    print("  ... limit reached.")
+                    break
+                }
             }
-            
-            // resolve redirects
-            print("Processing:", dep.packageURL, "...")
-            guard let resolved = try? await Current.resolvePackageRedirects(client, dep.packageURL).url else {
-                // TODO: consider adding retry for some errors
-                print("  ... ⛔ redirect resolution returned nil")
-                continue
-            }
-            
-            if resolved.canonicalPackageURL.canonicalPath != dep.canonicalPath {
-                print("  ... redirected to:", resolved)
+
+            print("New packages:", newPackages.count)
+            for (idx, p) in newPackages
+                .sorted()
+                .enumerated() {
+                print("  ✅ ADD", idx, p)
             }
 
-            if packageList.contains(resolved.canonicalPackageURL) {
-                print("  ... ⛔ already indexed")
-                continue
+            // merge with existing and sort result
+            let merged = (packageList.map(\.packageURL) + newPackages.map(\.packageURL)).sorted()
+
+            print("Total:", merged.count)
+
+            if let path = output {
+                try Current.fileManager.saveList(merged, path: path)
             }
-
-            do {  // run package dump to validate
-                let repo = try await Current.fetchRepository(client, resolved)
-                _ = try await Current.decodeManifest(client, repo)
-            } catch {
-                print("  ... ⛔ \(error)")
-                continue
-            }
-
-            if newPackages.insert(resolved.appendingGitExtension().canonicalPackageURL).inserted {
-                print("✅ ADD (\(newPackages.count)):", resolved.appendingGitExtension())
-            }
-            if newPackages.count >= limit {
-                print("  ... limit reached.")
-                break
-            }
-        }
-
-        print("New packages:", newPackages.count)
-        for (idx, p) in newPackages
-            .sorted()
-            .enumerated() {
-            print("  ✅ ADD", idx, p)
-        }
-
-        // merge with existing and sort result
-        let merged = (packageList.map(\.packageURL) + newPackages.map(\.packageURL)).sorted()
-
-        print("Total:", merged.count)
-
-        if let path = output {
-            try Current.fileManager.saveList(merged, path: path)
         }
     }
 
     public init() { }
-
 }
 
 
