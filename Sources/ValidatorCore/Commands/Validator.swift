@@ -16,15 +16,17 @@ import ArgumentParser
 
 
 public struct Validator: AsyncParsableCommand {
-    public static var configuration = CommandConfiguration(
-        abstract: "SPI Validator",
-        subcommands: [CheckDependencies.self,
-                      CheckRedirects.self,
-                      MergeLists.self,
-                      ApplyDenyList.self,
-                      Version.self],
-        defaultSubcommand: Version.self
-    )
+    public static var configuration: CommandConfiguration {
+        .init(
+            abstract: "SPI Validator",
+            subcommands: [CheckDependencies.self,
+                          CheckRedirects.self,
+                          MergeLists.self,
+                          ApplyDenyList.self,
+                          Version.self],
+            defaultSubcommand: Version.self
+        )
+    }
 
     public func run() async throws {}
 

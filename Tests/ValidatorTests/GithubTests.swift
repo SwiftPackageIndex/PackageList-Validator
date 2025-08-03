@@ -29,30 +29,35 @@ final class GithubTests: XCTestCase {
     func test_fetchRepository_retry() async throws {
         // setup
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
-        defer { try? client.syncShutdown() }
-        let repo = Github.Repository(defaultBranch: "main", owner: "foo", name: "bar")
-        var calls = 0
-        Current.fetch = { client, _ in
-            calls += 1
-            if calls < 3 {
-                return client.eventLoopGroup.next().makeFailedFuture(AppError.rateLimited(until: .now))
-            } else {
-                return client.eventLoopGroup.next().makeSucceededFuture(.init(data: repo.data))
+        do {
+            let repo = Github.Repository(defaultBranch: "main", owner: "foo", name: "bar")
+            var calls = 0
+            Current.fetch = { client, _ in
+                calls += 1
+                if calls < 3 {
+                    return client.eventLoopGroup.next().makeFailedFuture(AppError.rateLimited(until: .now))
+                } else {
+                    return client.eventLoopGroup.next().makeSucceededFuture(.init(data: repo.data))
+                }
             }
+
+            // MUT
+            let res = try await Github.fetchRepository(client: client, url: .p1)
+
+            // validate
+            XCTAssertEqual(calls, 3)
+            XCTAssertEqual(res, repo)
+        } catch {
+            try? await client.shutdown()
+            throw error
         }
-
-        // MUT
-        let res = try await Github.fetchRepository(client: client, url: .p1)
-
-        // validate
-        XCTAssertEqual(calls, 3)
-        XCTAssertEqual(res, repo)
+        try? await client.shutdown()
     }
 
     func test_fetchRepository_retryLimitExceeded() async throws {
         // setup
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
-        defer { try? client.syncShutdown() }
+
         var calls = 0
         Current.fetch = { client, _ in
             calls += 1
@@ -71,23 +76,30 @@ final class GithubTests: XCTestCase {
 
         // validate
         XCTAssertEqual(calls, 3)
+
+        try? await client.shutdown()
     }
 
     func test_listRepositoryFilePaths() async throws {
         // setup
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
-        defer { try? client.syncShutdown() }
-        let data = try fixtureData(for: "github-files-response.json")
-        Current.fetch = { client, _ in
-            return client.eventLoopGroup.next().makeSucceededFuture(ByteBuffer(data: data))
+        do {
+            let data = try fixtureData(for: "github-files-response.json")
+            Current.fetch = { client, _ in
+                return client.eventLoopGroup.next().makeSucceededFuture(ByteBuffer(data: data))
+            }
+            let repo = Github.Repository(defaultBranch: "main", owner: "SwiftPackageIndex", name: "SemanticVersion")
+
+            // MUT
+            let paths = try await Github.listRepositoryFilePaths(client: client, repository: repo)
+
+            // validate
+            XCTAssertEqual(paths, [".gitignore", ".spi.yml", "FUNDING.yml", "LICENSE", "Package.swift", "README.md"])
+        } catch {
+            try? await client.shutdown()
+            throw error
         }
-        let repo = Github.Repository(defaultBranch: "main", owner: "SwiftPackageIndex", name: "SemanticVersion")
-
-        // MUT
-        let paths = try await Github.listRepositoryFilePaths(client: client, repository: repo)
-
-        // validate
-        XCTAssertEqual(paths, [".gitignore", ".spi.yml", "FUNDING.yml", "LICENSE", "Package.swift", "README.md"])
+        try? await client.shutdown()
     }
 
 }

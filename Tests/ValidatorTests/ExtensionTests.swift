@@ -16,7 +16,7 @@ import XCTest
 
 @testable import ValidatorCore
 
-import CanonicalPackageURL
+@preconcurrency import CanonicalPackageURL
 
 
 final class ExtensionsTests: XCTestCase {

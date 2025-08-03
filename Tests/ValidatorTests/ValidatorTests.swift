@@ -78,41 +78,51 @@ final class ValidatorTests: XCTestCase {
     func test_getManifestURL() async throws {
         // setup
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
-        defer { try? client.syncShutdown() }
-        let data = try fixtureData(for: "github-files-response.json")
-        Current.fetch = { client, _ in
-            return client.eventLoopGroup.next().makeSucceededFuture(ByteBuffer(data: data))
+        do {
+            let data = try fixtureData(for: "github-files-response.json")
+            Current.fetch = { client, _ in
+                return client.eventLoopGroup.next().makeSucceededFuture(ByteBuffer(data: data))
+            }
+            let repo = Github.Repository(defaultBranch: "main", owner: "SwiftPackageIndex", name: "SemanticVersion")
+
+            // MUT
+            let url = try await Package.getManifestURLs(client: client, repository: repo)
+
+            // validate
+            XCTAssertEqual(url,
+                           [.init("https://raw.githubusercontent.com/SwiftPackageIndex/SemanticVersion/main/Package.swift")])
+        } catch {
+            try? await client.shutdown()
+            throw error
         }
-        let repo = Github.Repository(defaultBranch: "main", owner: "SwiftPackageIndex", name: "SemanticVersion")
-
-        // MUT
-        let url = try await Package.getManifestURLs(client: client, repository: repo)
-
-        // validate
-        XCTAssertEqual(url,
-                       [.init("https://raw.githubusercontent.com/SwiftPackageIndex/SemanticVersion/main/Package.swift")])
+        try? await client.shutdown()
     }
 
     func test_getManifestURL_multiple() async throws {
         // Get manifest URL when there are multiple Package*.swift manifest versions
         // setup
         let client = HTTPClient(eventLoopGroupProvider: .singleton)
-        defer { try? client.syncShutdown() }
-        let data = try fixtureData(for: "github-files-response-SwiftyJSON.json")
-        Current.fetch = { client, _ in
-            return client.eventLoopGroup.next().makeSucceededFuture(ByteBuffer(data: data))
+        do {
+            let data = try fixtureData(for: "github-files-response-SwiftyJSON.json")
+            Current.fetch = { client, _ in
+                return client.eventLoopGroup.next().makeSucceededFuture(ByteBuffer(data: data))
+            }
+            let repo = Github.Repository(defaultBranch: "master", owner: "IBM-Swift", name: "SwiftyJSON")
+            
+            // MUT
+            let url = try await Package.getManifestURLs(client: client, repository: repo)
+            
+            // validate
+            XCTAssertEqual(url,
+                           [.init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package.swift"),
+                            .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-4.2.swift"),
+                            .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-4.swift"),
+                            .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-5.swift")])
+        } catch {
+            try? await client.shutdown()
+            throw error
         }
-        let repo = Github.Repository(defaultBranch: "master", owner: "IBM-Swift", name: "SwiftyJSON")
-
-        // MUT
-        let url = try await Package.getManifestURLs(client: client, repository: repo)
-
-        // validate
-        XCTAssertEqual(url,
-                       [.init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package.swift"),
-                        .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-4.2.swift"),
-                        .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-4.swift"),
-                        .init("https://raw.githubusercontent.com/IBM-Swift/SwiftyJSON/master/Package@swift-5.swift")])
+        try? await client.shutdown()
     }
 
     func test_ArraySlice_chunk() throws {

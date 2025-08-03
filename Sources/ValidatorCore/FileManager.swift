@@ -31,26 +31,30 @@ struct FileManager {
 
 
 extension FileManager {
-    static let live: Self = .init(
-        contents: Foundation.FileManager.default.contents(atPath:),
-        createDirectory: Foundation.FileManager.default
-            .createDirectory(atPath:withIntermediateDirectories:attributes:),
-        createFile: Foundation.FileManager.default.createFile(atPath:contents:attributes:),
-        fileExists: Foundation.FileManager.default.fileExists(atPath:),
-        removeItem: Foundation.FileManager.default.removeItem(atPath:),
-        temporaryDirectory: { Foundation.FileManager.default.temporaryDirectory },
-        write: { data, path in try data.write(to: URL(fileURLWithPath: path)) }
-    )
-
-    static let mock: Self = .init(
-        contents: { _ in nil },
-        createDirectory: { _, _, _ in },
-        createFile: { _, _, _ in true },
-        fileExists: { _ in true },
-        removeItem: { _ in },
-        temporaryDirectory: { fatalError("not implemented") },
-        write: { _, _ in }
-    )
+    static var live: Self {
+        .init(
+            contents: Foundation.FileManager.default.contents(atPath:),
+            createDirectory: Foundation.FileManager.default
+                .createDirectory(atPath:withIntermediateDirectories:attributes:),
+            createFile: Foundation.FileManager.default.createFile(atPath:contents:attributes:),
+            fileExists: Foundation.FileManager.default.fileExists(atPath:),
+            removeItem: Foundation.FileManager.default.removeItem(atPath:),
+            temporaryDirectory: { Foundation.FileManager.default.temporaryDirectory },
+            write: { data, path in try data.write(to: URL(fileURLWithPath: path)) }
+        )
+    }
+    
+    static var mock: Self {
+        .init(
+            contents: { _ in nil },
+            createDirectory: { _, _, _ in },
+            createFile: { _, _, _ in true },
+            fileExists: { _ in true },
+            removeItem: { _ in },
+            temporaryDirectory: { fatalError("not implemented") },
+            write: { _, _ in }
+        )
+    }
 }
 
 
