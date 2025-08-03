@@ -131,7 +131,7 @@ extension Github {
     }
 
 
-    nonisolated(unsafe) static var repositoryCache = Cache<Repository>()
+    static var repositoryCache = Cache<Repository>()
 
 
     static func fetchRepository(client: Client, url: PackageURL) async throws-> Repository {

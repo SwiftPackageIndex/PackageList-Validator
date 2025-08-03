@@ -16,7 +16,7 @@ import XCTest
 
 @testable import ValidatorCore
 
-@preconcurrency import CanonicalPackageURL
+import CanonicalPackageURL
 import NIO
 
 

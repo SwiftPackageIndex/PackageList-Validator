@@ -31,31 +31,27 @@ struct Environment {
 
 
 extension Environment {
-    static var live: Self {
-        .init(
-            decodeManifest: { client, repo in try await Package.decode(client: client, repository: repo) },
-            fileManager: .live,
-            fetch: Github.fetch(client:url:),
-            fetchDependencies: { try await $0.fetchDependencies() },
-            fetchRepository: Github.fetchRepository(client:url:),
-            githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
-            resolvePackageRedirects: resolvePackageRedirects(client:for:),
-            shell: .live
-        )
-    }
-    
-    static var mock: Self {
-        .init(
-            decodeManifest: { _, _ in fatalError("not implemented") },
-            fileManager: .mock,
-            fetch: { client, _ in client.eventLoopGroup.next().makeFailedFuture(AppError.runtimeError("unimplemented")) },
-            fetchDependencies: { _ in [] },
-            fetchRepository: { _, _ in .init(defaultBranch: "main", owner: "foo", name: "bar") },
-            githubToken: { nil },
-            resolvePackageRedirects: { _, url in .initial(url) },
-            shell: .mock
-        )
-    }
+    static let live: Self = .init(
+        decodeManifest: { client, repo in try await Package.decode(client: client, repository: repo) },
+        fileManager: .live,
+        fetch: Github.fetch(client:url:),
+        fetchDependencies: { try await $0.fetchDependencies() },
+        fetchRepository: Github.fetchRepository(client:url:),
+        githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
+        resolvePackageRedirects: resolvePackageRedirects(client:for:),
+        shell: .live
+    )
+
+    static let mock: Self = .init(
+        decodeManifest: { _, _ in fatalError("not implemented") },
+        fileManager: .mock,
+        fetch: { client, _ in client.eventLoopGroup.next().makeFailedFuture(AppError.runtimeError("unimplemented")) },
+        fetchDependencies: { _ in [] },
+        fetchRepository: { _, _ in .init(defaultBranch: "main", owner: "foo", name: "bar") },
+        githubToken: { nil },
+        resolvePackageRedirects: { _, url in .initial(url) },
+        shell: .mock
+    )
 }
 
 
@@ -73,7 +69,7 @@ extension HTTPClient: Client { }
 
 
 #if DEBUG
-nonisolated(unsafe) var Current: Environment = .live
+var Current: Environment = .live
 #else
 let Current: Environment = .live
 #endif

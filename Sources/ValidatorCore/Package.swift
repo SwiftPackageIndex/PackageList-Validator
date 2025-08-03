@@ -80,7 +80,7 @@ struct Package: Codable {
 
 extension Package {
 
-    nonisolated(unsafe) static var packageDumpCache = Cache<Package>()
+    static var packageDumpCache = Cache<Package>()
 
     static var cacheFilename: String { ".packageDumpCache" }
     static func loadPackageDumpCache() { packageDumpCache = .load(from: cacheFilename) }
@@ -105,7 +105,7 @@ extension Package {
             do {
                 guard let pkgJSON = try await Current.shell.run(command: .packageDump, at: tempDir)
                     .stdout
-                    .data(using: .utf8) else {
+                        .data(using: .utf8) else {
                     throw AppError.dumpPackageError("package dump did not return data")
                 }
                 let pkg = try JSONDecoder().decode(Package.self, from: pkgJSON)

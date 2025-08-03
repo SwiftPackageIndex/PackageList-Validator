@@ -69,7 +69,7 @@ extension Validator {
             }
         }
 
-        nonisolated(unsafe) static var normalizedPackageURLs = NormalizedPackageURLs(inputURLs: [])
+        static var normalizedPackageURLs = NormalizedPackageURLs(inputURLs: [])
 
         static func process(redirect: Redirect,
                             verbose: Bool,
