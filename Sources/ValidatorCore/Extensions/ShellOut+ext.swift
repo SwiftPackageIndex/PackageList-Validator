@@ -17,8 +17,8 @@ import ShellOut
 
 extension ShellOutCommand {
 #if os(macOS)
-    static let packageDump = ShellOutCommand(string: "/usr/bin/xcrun swift package dump-package")
+    static let packageDump = ShellOutCommand(command: "/usr/bin/xcrun", arguments: ["swift", "package", "dump-package"])
 #else
-    static let packageDump = ShellOutCommand(string: "swift package dump-package")
+    static let packageDump = ShellOutCommand(command: "swift", arguments: ["package", "dump-package"])
 #endif
 }

@@ -1,4 +1,4 @@
-// swift-tools-version:5.8
+// swift-tools-version:6.0
 
 // Copyright Dave Verwer, Sven A. Schmidt, and other contributors.
 //
@@ -18,12 +18,12 @@ import PackageDescription
 
 let package = Package(
     name: "validator",
-    platforms: [.macOS(.v10_15)],
+    platforms: [.macOS(.v15)],
     products: [
       .executable(name: "validator", targets: ["validator"])
     ],
     dependencies: [
-        .package(url: "https://github.com/JohnSundell/ShellOut.git", from: "2.3.0"),
+        .package(url: "https://github.com/SwiftPackageIndex/ShellOut.git", from: "3.0.0"),
         .package(url: "https://github.com/SwiftPackageIndex/CanonicalPackageURL.git", from: "0.0.6"),
         .package(url: "https://github.com/apple/swift-algorithms.git", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
@@ -45,5 +45,6 @@ let package = Package(
         .testTarget(name: "ValidatorTests",
                     dependencies: ["ValidatorCore"],
                     exclude: ["Fixtures"]),
-    ]
+    ],
+    swiftLanguageModes: [.version("5")]
 )

@@ -103,7 +103,8 @@ extension Package {
                 }
             }
             do {
-                guard let pkgJSON = try Current.shell.run(command: .packageDump, at: tempDir)
+                guard let pkgJSON = try await Current.shell.run(command: .packageDump, at: tempDir)
+                    .stdout
                         .data(using: .utf8) else {
                     throw AppError.dumpPackageError("package dump did not return data")
                 }
