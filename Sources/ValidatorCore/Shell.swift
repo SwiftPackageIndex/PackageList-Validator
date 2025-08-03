@@ -26,10 +26,14 @@ struct Shell {
 
     static var live: Self {
         .init(run: { cmd, path, stdout, stderr in
-            try await ShellOut.shellOut(to: cmd,
-                                        at: path,
-                                        outputHandle: stdout,
-                                        errorHandle: stderr)
+            try await ShellOut.shellOut(
+                to: cmd,
+                at: path,
+                outputHandle: stdout,
+                errorHandle: stderr,
+                environment: ProcessInfo.processInfo.environment
+                    .merging(["SPI_PROCESSING": "1"], uniquingKeysWith: { $1 })
+            )
         })
     }
 
