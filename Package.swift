@@ -45,5 +45,6 @@ let package = Package(
         .testTarget(name: "ValidatorTests",
                     dependencies: ["ValidatorCore"],
                     exclude: ["Fixtures"]),
-    ]
+    ],
+    swiftLanguageModes: [.version("5")]
 )
