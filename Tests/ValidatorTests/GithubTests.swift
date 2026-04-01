@@ -87,7 +87,7 @@ final class GithubTests: XCTestCase {
         let paths = try await Github.listRepositoryFilePaths(client: client, repository: repo)
 
         // validate
-        XCTAssertEqual(paths, [".gitignore", ".spi.yml", "FUNDING.yml", "LICENSE", "Package.swift", "README.md"])
+        XCTAssertEqual(paths, [".gitignore", ".spi.yml", "LICENSE", "Package.swift", "README.md"])
     }
 
 }

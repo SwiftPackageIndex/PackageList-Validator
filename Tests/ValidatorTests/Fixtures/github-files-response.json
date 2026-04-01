@@ -25,14 +25,6 @@
       "sha" : "03cc90728b8a45dd7adb42f3c214ccd4b8be4eb4"
     },
     {
-      "type" : "blob",
-      "size" : 160,
-      "sha" : "bb3db5b735bdaed95d21048ddbd6a002697af90c",
-      "path" : "FUNDING.yml",
-      "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/blobs\/bb3db5b735bdaed95d21048ddbd6a002697af90c",
-      "mode" : "100644"
-    },
-    {
       "url" : "https:\/\/api.github.com\/repos\/SwiftPackageIndex\/SemanticVersion\/git\/blobs\/dd5b3a58aa1849f452abc9b5cd1638dc71a5e482",
       "path" : "LICENSE",
       "size" : 10141,
