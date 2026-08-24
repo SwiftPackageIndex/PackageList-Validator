@@ -103,9 +103,11 @@ extension Package {
                 }
             }
             do {
-                guard let pkgJSON = try await Current.shell.run(command: .packageDump, at: tempDir)
-                    .stdout
-                        .data(using: .utf8) else {
+                guard let pkgJSON = try await Current.shell.run(
+                    command: .packageDump,
+                    at: tempDir,
+                    environment: ["SPI_PROCESSING": "1"]
+                ).stdout.data(using: .utf8) else {
                     throw AppError.dumpPackageError("package dump did not return data")
                 }
                 let pkg = try JSONDecoder().decode(Package.self, from: pkgJSON)
