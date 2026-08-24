@@ -17,29 +17,28 @@ import ShellOut
 
 
 struct Shell {
-    var run: (ShellOutCommand, String, FileHandle?, FileHandle?) async throws -> (stdout: String, stderr: String)
+    var run: (ShellOutCommand, String, FileHandle?, FileHandle?, [String: String]) async throws -> (stdout: String, stderr: String)
 
     @discardableResult
-    func run(command: ShellOutCommand, at path: String = ".") async throws -> (stdout: String, stderr: String) {
-        try await run(command, path, nil, nil)
+    func run(command: ShellOutCommand, at path: String = ".", environment: [String: String]) async throws -> (stdout: String, stderr: String) {
+        try await run(command, path, nil, nil, environment)
     }
 
     static var live: Self {
-        .init(run: { cmd, path, stdout, stderr in
+        .init(run: { cmd, path, stdout, stderr, environment in
             try await ShellOut.shellOut(
                 to: cmd,
                 at: path,
                 outputHandle: stdout,
                 errorHandle: stderr,
-                environment: ProcessInfo.processInfo.environment
-                    .merging(["SPI_PROCESSING": "1"], uniquingKeysWith: { $1 })
+                environment: environment
             )
         })
     }
 
     static var mock: Self {
         .init(
-            run: { _, _, _, _ in fatalError("not implemented") }
+            run: { _, _, _, _, _ in fatalError("not implemented") }
         )
     }
 }
