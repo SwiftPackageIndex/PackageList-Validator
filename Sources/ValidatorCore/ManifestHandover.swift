@@ -33,9 +33,12 @@ struct ManifestHandover {
     static let evaluatedMarker = "evaluated"
     static let failedMarker = "failed"
 
+    // The one directory the evaluation container mounts. Everything else here stays outside it.
+    static let manifestsDirectory = "manifests"
+
     func prepare(slug: String, url: PackageURL) throws -> String {
         try validate(slug: slug)
-        let manifests = path(slug, "manifests")
+        let manifests = path(slug, Self.manifestsDirectory)
         try Current.fileManager.createDirectory(manifests, true, nil)
         guard Current.fileManager.createFile(path(slug, "url"), Data(url.absoluteString.utf8), nil) else {
             throw AppError.ioError("failed to write url for \(slug) in \(root)")
@@ -50,7 +53,7 @@ struct ManifestHandover {
             )
         }
         return try Current.fileManager.contentsOfDirectory(root)
-            .filter { Current.fileManager.fileExists(path($0, "manifests")) }
+            .filter { Current.fileManager.fileExists(path($0, Self.manifestsDirectory)) }
             .filter { !Current.fileManager.fileExists(path($0, Self.failedMarker)) }
             .map(packageURL(slug:))
     }
@@ -60,7 +63,7 @@ struct ManifestHandover {
         try Current.fileManager.removeItem(path(slug))
     }
 
-    func packageURL(slug: String) throws -> PackageURL {
+    private func packageURL(slug: String) throws -> PackageURL {
         guard let data = Current.fileManager.contents(path(slug, "url")),
               let url = URL(string: String(decoding: data, as: UTF8.self)
                   .trimmingCharacters(in: .whitespacesAndNewlines))
@@ -68,18 +71,20 @@ struct ManifestHandover {
         return .init(rawValue: url)
     }
 
+    // Valid characters for GitHub repository names are alphanumerics, hyphens, underscores and
+    // dots.
+    private static let allowedInSlug = CharacterSet.alphanumerics.union(.init(charactersIn: "-_."))
+
     // A slug names a directory we create, and it is built from what the GitHub API told us the
-    // repository is called. Valid characters for repo names are alphanumerics, hyphens, underscores
-    // and dots.
+    // repository is called.
     private func validate(slug: String) throws {
-        let allowed = CharacterSet.alphanumerics.union(.init(charactersIn: "-_."))
         guard !slug.isEmpty,
               slug.first != ".",
-              slug.unicodeScalars.allSatisfy(allowed.contains)
+              slug.unicodeScalars.allSatisfy(Self.allowedInSlug.contains)
         else { throw AppError.runtimeError("'\(slug)' is not usable as a handover directory name") }
     }
 
-    func path(_ components: String...) -> String {
+    private func path(_ components: String...) -> String {
         components.reduce(URL(fileURLWithPath: root)) { $0.appendingPathComponent($1) }.path
     }
 }

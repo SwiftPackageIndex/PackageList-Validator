@@ -33,12 +33,6 @@ final class CheckDependenciesTests: XCTestCase {
         check.spiApiToken = "unused"
     }
 
-    func test_validate_requires_a_manifest_directory() throws {
-        // Without it there is nowhere to put the manifests and nothing would ever be evaluated.
-        check.manifestDir = ""
-        XCTAssertThrowsError(try check.validate())
-    }
-
     func test_run_basic() async throws {
         // Input urls and api urls agree - we're up-to-date with reconciliation, i.e. the package list
         // we process in validation is the same package list that has been reconciled when we make the
@@ -117,7 +111,7 @@ final class CheckDependenciesTests: XCTestCase {
             }
         }
         Current.fetchManifests = { _, _, _ in
-            throw AppError.dumpPackageError("simulated fetch error")
+            throw AppError.ioError("simulated fetch error")
         }
         var removed = [String]()
         Current.fileManager.removeItem = { removed.append($0) }

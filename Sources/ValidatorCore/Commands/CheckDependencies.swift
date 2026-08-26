@@ -29,8 +29,8 @@ public struct CheckDependencies: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "stop after fetching this many candidates")
     var limit: Int = .max
 
-    @Option(name: .long, help: "directory to fetch candidate manifests into")
-    var manifestDir: String = ""
+    @Option(name: .long, help: "existing directory to fetch candidate manifests into, for evaluate_manifests.sh to evaluate")
+    var manifestDir: String
 
     @Option(name: .shortAndLong)
     var maxCheck: Int = .max
@@ -40,15 +40,6 @@ public struct CheckDependencies: AsyncParsableCommand {
 
     @Option(name: .long)
     var spiApiToken: String
-
-    public func validate() throws {
-        guard !manifestDir.isEmpty else {
-            throw ValidationError("""
-                Specify a manifest directory (--manifest-dir). Candidate manifests are fetched \
-                there for evaluate_manifests.sh to evaluate, so it must already exist.
-                """)
-        }
-    }
 
     public func run() async throws {
         let start = Date()
@@ -129,16 +120,7 @@ public struct CheckDependencies: AsyncParsableCommand {
 
 
 extension CheckDependencies {
-    var inputSource: InputSource {
-        switch (input, packageUrls.count) {
-            case (.some(let fname), 0):
-                return .file(fname)
-            case (.none, 1...):
-                return .packageURLs(packageUrls)
-            default:
-                return .invalid
-        }
-    }
+    var inputSource: InputSource { .init(input: input, packageURLs: packageUrls) }
 }
 
 

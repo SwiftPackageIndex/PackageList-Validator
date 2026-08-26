@@ -24,20 +24,14 @@ public struct AddValidatedDependencies: ParsableCommand {
     @Option(name: .shortAndLong, help: "read input URLs from file")
     var input: String?
 
-    @Option(name: .long, help: "directory check-dependencies fetched manifests into")
-    var manifestDir: String = ""
+    @Option(name: .long, help: "directory check-dependencies fetched manifests into, once they have been evaluated")
+    var manifestDir: String
 
     @Option(name: .shortAndLong, help: "save changes to output file")
     var output: String?
 
     @Argument(help: "package URLs already on the list")
     var packageUrls: [PackageURL] = []
-
-    public func validate() throws {
-        guard !manifestDir.isEmpty else {
-            throw ValidationError("Specify the manifest directory (--manifest-dir) that was evaluated.")
-        }
-    }
 
     public func run() throws {
         let packageList = UniqueCanonicalPackageURLs(try inputSource.packageURLs())
@@ -65,14 +59,5 @@ public struct AddValidatedDependencies: ParsableCommand {
 
 
 extension AddValidatedDependencies {
-    var inputSource: InputSource {
-        switch (input, packageUrls.count) {
-            case (.some(let fname), 0):
-                return .file(fname)
-            case (.none, 1...):
-                return .packageURLs(packageUrls)
-            default:
-                return .invalid
-        }
-    }
+    var inputSource: InputSource { .init(input: input, packageURLs: packageUrls) }
 }

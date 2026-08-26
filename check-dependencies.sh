@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Smoke test for the dependency check, which is two commands with a handover directory between
+# Smoke test for the dependency check, which is three commands with a handover directory between
 # them: check-dependencies fetches candidate manifests, something else evaluates them, and
 # add-validated-dependencies adds the ones that loaded.
 #
@@ -29,6 +29,7 @@ set -eu
 validator="swift run validator"
 manifest_dir="$(mktemp -d)"
 marker="evaluated"
+trap 'rm -rf "$manifest_dir"' EXIT
 
 # log the first 10 packages so we can compare the chunking
 echo "Head of packages.json:"
@@ -53,9 +54,6 @@ if [ -z "$(find "$manifest_dir" -name 'Package*.swift' -print -quit)" ]; then
     echo "      beyond the two commands agreeing that the directory is empty."
 fi
 
-# The sign off is what tells add-validated-dependencies that the manifests were actually
-# evaluated. Without it a directory nothing ever looked at is indistinguishable from one where
-# nothing failed, so it has to refuse rather than add every candidate unchecked.
 echo
 echo "=== add-validated-dependencies must refuse an unevaluated handover ==="
 # Matching the message, not just a non-zero exit. `swift run` returns non-zero for a build
@@ -73,9 +71,8 @@ if ! echo "$refusal" | grep -q 'manifests were never evaluated'; then
 fi
 echo "... refused, as it should"
 
-# Standing in for evaluate_manifests.sh: pretend every candidate loaded. Nothing here evaluates
-# anything, so this says nothing about whether the manifests are valid - only that the two
-# commands agree on the directory layout.
+# Standing in for evaluate_manifests.sh: pretend every candidate loaded. This says nothing about
+# whether the manifests are valid, only that the two commands agree on the directory layout.
 echo
 echo "=== signing off as the evaluation step would, then adding ==="
 touch "$manifest_dir/$marker"
@@ -86,5 +83,3 @@ $validator add-validated-dependencies \
 echo
 echo "=== resulting packages.json ==="
 head -11 packages.json
-
-rm -rf "$manifest_dir"

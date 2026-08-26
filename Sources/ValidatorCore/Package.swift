@@ -86,15 +86,15 @@ extension Package {
         for manifestURL in try await Package.getManifestURLs(client: client, repository: repository) {
             let name = manifestURL.rawValue.lastPathComponent
             guard isManifestFilename(name) else {
-                throw AppError.dumpPackageError("refusing to write manifest named '\(name)' from \(repository.path)")
+                throw AppError.ioError("refusing to write manifest named '\(name)' from \(repository.path)")
             }
             let fileURL = URL(fileURLWithPath: directory).appendingPathComponent(name)
             let buffer = try await Current.fetch(client, manifestURL.rawValue).get()
             guard let data = buffer.getData(at: 0, length: buffer.readableBytes) else {
-                throw AppError.dumpPackageError("failed to get data for manifest \(manifestURL.rawValue.absoluteString)")
+                throw AppError.ioError("failed to get data for manifest \(manifestURL.rawValue.absoluteString)")
             }
             guard Current.fileManager.createFile(fileURL.path, data, nil) else {
-                throw AppError.dumpPackageError("failed to save manifest \(manifestURL.rawValue.absoluteString) to \(fileURL.absoluteString)")
+                throw AppError.ioError("failed to save manifest \(manifestURL.rawValue.absoluteString) to \(fileURL.absoluteString)")
             }
         }
     }

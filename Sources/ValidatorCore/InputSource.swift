@@ -21,6 +21,19 @@ enum InputSource {
     case packageList
     case packageURLs([PackageURL])
 
+    // Commands taking either --input or a list of package URLs, but not both, resolve which one
+    // they were given this way.
+    init(input: String?, packageURLs: [PackageURL]) {
+        switch (input, packageURLs.count) {
+            case (.some(let fname), 0):
+                self = .file(fname)
+            case (.none, 1...):
+                self = .packageURLs(packageURLs)
+            default:
+                self = .invalid
+        }
+    }
+
     func packageURLs() throws -> [PackageURL] {
         switch self {
             case .file(let path):

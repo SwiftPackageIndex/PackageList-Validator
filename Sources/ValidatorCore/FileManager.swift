@@ -26,7 +26,6 @@ struct FileManager {
                      _ attributes: [FileAttributeKey : Any]?) -> Bool
     var fileExists: (_ path: String) -> Bool
     var removeItem: (_ path: String) throws -> Void
-    var temporaryDirectory: () -> URL
     var write: (_ contents: Data, _ toPath: String) throws -> Void
 }
 
@@ -40,7 +39,6 @@ extension FileManager {
         createFile: Foundation.FileManager.default.createFile(atPath:contents:attributes:),
         fileExists: Foundation.FileManager.default.fileExists(atPath:),
         removeItem: Foundation.FileManager.default.removeItem(atPath:),
-        temporaryDirectory: { Foundation.FileManager.default.temporaryDirectory },
         write: { data, path in try data.write(to: URL(fileURLWithPath: path)) }
     )
 
@@ -51,7 +49,6 @@ extension FileManager {
         createFile: { _, _, _ in true },
         fileExists: { _ in true },
         removeItem: { _ in },
-        temporaryDirectory: { fatalError("not implemented") },
         write: { _, _ in }
     )
 }

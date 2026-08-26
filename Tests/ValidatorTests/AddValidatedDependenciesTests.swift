@@ -19,31 +19,28 @@ import XCTest
 
 final class AddValidatedDependenciesTests: XCTestCase {
     var add = AddValidatedDependencies()
+    var savedList: [PackageURL]?
 
     override func setUp() {
         super.setUp()
         add.input = nil
         add.manifestDir = "/handover"
         add.output = "package.json"
-    }
-
-    func test_validate_requires_a_manifest_directory() throws {
-        add.manifestDir = ""
-        XCTAssertThrowsError(try add.validate())
+        savedList = nil
     }
 
     func test_run_adds_evaluated_packages_to_the_list() throws {
         // setup
         Current = .mock
         handover(["org_3": .p3])
-        let saved = capturingSavedList()
+        captureSavedList()
         add.packageUrls = [.p1, .p2]
 
         // MUT
         try add.run()
 
         // validate
-        XCTAssertEqual(saved.value, [.p1, .p2, .p3])
+        XCTAssertEqual(savedList, [.p1, .p2, .p3])
     }
 
     func test_run_keeps_input_urls_the_server_has_not_caught_up_with() throws {
@@ -52,28 +49,28 @@ final class AddValidatedDependenciesTests: XCTestCase {
         // setup
         Current = .mock
         handover(["org_3": .p3])
-        let saved = capturingSavedList()
+        captureSavedList()
         add.packageUrls = [.p1, .p2, .p4]
 
         // MUT
         try add.run()
 
         // validate
-        XCTAssertEqual(saved.value, [.p1, .p2, .p3, .p4])
+        XCTAssertEqual(savedList, [.p1, .p2, .p3, .p4])
     }
 
     func test_run_does_not_add_a_package_already_on_the_list() throws {
         // setup
         Current = .mock
         handover(["org_1": .p1])
-        let saved = capturingSavedList()
+        captureSavedList()
         add.packageUrls = [.p1, .p2]
 
         // MUT
         try add.run()
 
         // validate
-        XCTAssertEqual(saved.value, [.p1, .p2])
+        XCTAssertEqual(savedList, [.p1, .p2])
     }
 
     func test_run_refuses_a_handover_that_was_never_evaluated() throws {
@@ -98,20 +95,13 @@ final class AddValidatedDependenciesTests: XCTestCase {
         }
     }
 
-    private func capturingSavedList() -> Box {
-        let box = Box()
-        Current.fileManager.createFile = { path, data, _ in
+    private func captureSavedList() {
+        Current.fileManager.createFile = { [unowned self] path, data, _ in
             guard path.hasSuffix("package.json"), let data else { return false }
-            box.value = try? JSONDecoder().decode([PackageURL].self, from: data)
+            savedList = try? JSONDecoder().decode([PackageURL].self, from: data)
             return true
         }
-        return box
     }
-}
-
-
-private final class Box {
-    var value: [PackageURL]?
 }
 
 

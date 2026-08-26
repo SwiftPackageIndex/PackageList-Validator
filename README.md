@@ -4,7 +4,7 @@ Validator for nightly PackageList validation.
 
 ## How PackageList's nightly job uses this
 
-The validator does not evaluate manifests, instead `check-dependencies` fetches candidate manifests and stops. Then these manifest should be evaluated with `swift dump-package` in an isolated container. Finally, `add-validated-dependencies` adds whichever ones loaded.
+The validator does not evaluate manifests, instead `check-dependencies` fetches candidate manifests and stops. Then these manifests should be evaluated with `swift package dump-package` in an isolated container. Finally, `add-validated-dependencies` adds whichever ones loaded.
 
 That split is why the dependency check is three commands rather than one. PackageList and PackageList-Validator agree on a directory layout for the manifests.
 
