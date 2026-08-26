@@ -28,6 +28,7 @@ set -eu
 
 validator="swift run validator"
 manifest_dir="$(mktemp -d)"
+marker="evaluated"
 
 # log the first 10 packages so we can compare the chunking
 echo "Head of packages.json:"
@@ -36,10 +37,6 @@ echo "..."
 echo
 
 echo "=== fetching candidate manifests into $manifest_dir ==="
-# --max-check walks candidates, --limit stops at the first one successfully handed over. Both are
-# needed: candidates are sorted by URL, and the first few are consistently non-GitHub hosts whose
-# redirect resolution returns nil, so --max-check 1 examines one URL, skips it, and fetches
-# nothing. Walking until something is actually fetched is what makes this test not vacuous.
 $validator check-dependencies \
     --spi-api-token "$SPI_API_TOKEN" \
     --input packages.json \
@@ -61,11 +58,17 @@ fi
 # nothing failed, so it has to refuse rather than add every candidate unchecked.
 echo
 echo "=== add-validated-dependencies must refuse an unevaluated handover ==="
-if $validator add-validated-dependencies \
-        --manifest-dir "$manifest_dir" \
-        --input packages.json --output /dev/null 2>&1
-then
-    echo "FAILED: it accepted a handover with no '$manifest_dir/evaluated' marker"
+# Matching the message, not just a non-zero exit. `swift run` returns non-zero for a build
+# failure, a bad flag or a missing binary too, so exit status alone would report those as a
+# passing refusal and the assertion would hold even with the check deleted. Matching text
+# without quotes in it, because the thrown error reaches stderr with its quotes escaped.
+refusal="$($validator add-validated-dependencies \
+    --manifest-dir "$manifest_dir" \
+    --input packages.json --output /dev/null 2>&1 || true)"
+
+if ! echo "$refusal" | grep -q 'manifests were never evaluated'; then
+    echo "FAILED: expected a refusal naming the missing '$marker' marker, got:"
+    echo "$refusal"
     exit 1
 fi
 echo "... refused, as it should"
@@ -75,7 +78,7 @@ echo "... refused, as it should"
 # commands agree on the directory layout.
 echo
 echo "=== signing off as the evaluation step would, then adding ==="
-touch "$manifest_dir/evaluated"
+touch "$manifest_dir/$marker"
 $validator add-validated-dependencies \
     --manifest-dir "$manifest_dir" \
     --input packages.json --output packages.json
