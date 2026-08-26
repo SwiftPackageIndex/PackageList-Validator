@@ -48,20 +48,6 @@ func fixturesDirectory(path: String = #file) -> URL {
 
 @testable import ValidatorCore
 
-extension Package {
-    static func mock(dependencyURLs: [PackageURL]) -> Self {
-        .init(name: "",
-              products: [.mock],
-              dependencies: dependencyURLs.map { .init(location: $0) } )
-    }
-}
-
-
-extension Package.Product {
-    static let mock: Self = .init(name: "product")
-}
-
-
 extension Array where Element == String {
     var asURLs: [PackageURL] {
         compactMap(URL.init(string:))
@@ -76,11 +62,3 @@ extension Package.ManifestURL {
     }
 }
 
-
-extension Package.Dependency {
-    init(location: PackageURL) {
-        self.init(sourceControl: [
-            .init(location: .init(remote: [.init(packageURL: location)]))
-        ])
-    }
-}

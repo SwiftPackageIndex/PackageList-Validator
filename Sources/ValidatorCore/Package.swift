@@ -15,7 +15,6 @@
 import AsyncHTTPClient
 import Foundation
 import NIO
-import ShellOut
 import Tagged
 
 
@@ -80,43 +79,31 @@ struct Package: Codable {
 
 extension Package {
 
-    static var packageDumpCache = Cache<Package>()
-
-    static var cacheFilename: String { ".packageDumpCache" }
-    static func loadPackageDumpCache() { packageDumpCache = .load(from: cacheFilename) }
-    static func savePackageDumpCache() throws { try packageDumpCache.save(to: cacheFilename) }
-
-    static func decode(client: Client, repository: Github.Repository) async throws -> Self {
-        let cacheKey = repository.path
-        if let cached = packageDumpCache[Cache.Key(string: cacheKey)] {
-            return cached
-        }
-        return try await withTempDir { tempDir in
-            for manifestURL in try await Package.getManifestURLs(client: client, repository: repository) {
-                let fileURL = URL(fileURLWithPath: tempDir).appendingPathComponent(manifestURL.lastPathComponent)
-                let buffer = try await Current.fetch(client, manifestURL.rawValue).get()
-                guard let data = buffer.getData(at: 0, length: buffer.readableBytes) else {
-                    throw AppError.dumpPackageError("failed to get data for manifest \(manifestURL.rawValue.absoluteString)")
-                }
-                guard Current.fileManager.createFile(fileURL.path, data, nil) else {
-                    throw AppError.dumpPackageError("failed to save manifest \(manifestURL.rawValue.absoluteString) to temp directory \(fileURL.absoluteString)")
-                }
+    // Fetches the package's manifests into `directory` for evaluate_manifests.sh to evaluate.
+    // It deliberately does not evaluate them: that runs third party code, which belongs in the
+    // script's container rather than in this process, which holds tokens and has a network.
+    static func fetchManifests(client: Client, repository: Github.Repository, into directory: String) async throws {
+        for manifestURL in try await Package.getManifestURLs(client: client, repository: repository) {
+            let name = manifestURL.rawValue.lastPathComponent
+            guard isManifestFilename(name) else {
+                throw AppError.ioError("refusing to write manifest named '\(name)' from \(repository.path)")
             }
-            do {
-                guard let pkgJSON = try await Current.shell.run(
-                    command: .packageDump,
-                    at: tempDir,
-                    environment: ["SPI_PROCESSING": "1"]
-                ).stdout.data(using: .utf8) else {
-                    throw AppError.dumpPackageError("package dump did not return data")
-                }
-                let pkg = try JSONDecoder().decode(Package.self, from: pkgJSON)
-                packageDumpCache[Cache.Key(string: cacheKey)] = pkg
-                return pkg
-            } catch let error as ShellOutError {
-                throw AppError.dumpPackageError("package dump failed: \(error.message)")
+            let fileURL = URL(fileURLWithPath: directory).appendingPathComponent(name)
+            let buffer = try await Current.fetch(client, manifestURL.rawValue).get()
+            guard let data = buffer.getData(at: 0, length: buffer.readableBytes) else {
+                throw AppError.ioError("failed to get data for manifest \(manifestURL.rawValue.absoluteString)")
+            }
+            guard Current.fileManager.createFile(fileURL.path, data, nil) else {
+                throw AppError.ioError("failed to save manifest \(manifestURL.rawValue.absoluteString) to \(fileURL.absoluteString)")
             }
         }
+    }
+
+    // The manifest list comes from the repository being validated, so it is attacker controlled.
+    // A manifest is a single path component named Package*.swift and nothing else.
+    static func isManifestFilename(_ name: String) -> Bool {
+        name.hasPrefix("Package") && name.hasSuffix(".swift")
+            && !name.contains("/") && !name.contains("\u{0}")
     }
 
 }
@@ -128,7 +115,10 @@ extension Package {
     typealias ManifestURL = Tagged<Manifest, URL>
 
     static func getManifestURLs(client: Client, repository: Github.Repository) async throws -> [ManifestURL] {
+        // Filtering the whole path would also match `Packages/Package.swift`, which is not this
+        // package's manifest and which collides with the real one once we write it out by name.
         let manifestFiles = try await Github.listRepositoryFilePaths(client: client, repository: repository)
+          .filter { !$0.contains("/") }
           .filter { $0.hasPrefix("Package") }
           .filter { $0.hasSuffix(".swift") }
           .sorted()

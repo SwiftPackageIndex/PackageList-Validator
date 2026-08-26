@@ -28,9 +28,9 @@ final class CheckDependenciesTests: XCTestCase {
         check.apiBaseURL = "unused"
         check.input = nil
         check.limit = .max
+        check.manifestDir = "/handover"
         check.maxCheck = .max
         check.spiApiToken = "unused"
-        check.output = "unused"
     }
 
     func test_run_basic() async throws {
@@ -43,20 +43,6 @@ final class CheckDependenciesTests: XCTestCase {
             .init(.p1, dependencies: []),
             .init(.p2, dependencies: [.p3]),
         ]}
-        var saved: [PackageURL]? = nil
-        Current.fileManager.createFile = { path, data, _ in
-            guard path.hasSuffix("package.json") else { return false }
-            guard let data = data else {
-                XCTFail("data must not be nil")
-                return false
-            }
-            guard let list = try? JSONDecoder().decode([PackageURL].self, from: data) else {
-                XCTFail("decoding of output failed")
-                return false
-            }
-            saved = list
-            return true
-        }
         Current.fetchRepository = { _, url in
             if url == PackageURL.p3 {
                 return .init(defaultBranch: "main", owner: "org", name: "3")
@@ -64,46 +50,59 @@ final class CheckDependenciesTests: XCTestCase {
                 throw Error.unexpectedCall
             }
         }
-        var decodeCalled = false
-        Current.decodeManifest = { _, repo in
+        var handedOver = [String]()
+        Current.fetchManifests = { _, repo, directory in
             guard repo.path == "org/3" else { throw Error.unexpectedCall }
-            decodeCalled = true
-            return .init(name: "3", products: [], dependencies: [])
+            handedOver.append(directory)
+        }
+        var urlsWritten = [String: String]()
+        Current.fileManager.createFile = { path, data, _ in
+            urlsWritten[path] = data.map { String(decoding: $0, as: UTF8.self) }
+            return true
         }
         check.packageUrls = [.p1, .p2]
-        check.output = "package.json"
 
         // MUT
         try await check.run()
 
         // validate
-        XCTAssertEqual(saved, [.p1, .p2, .p3])
-        XCTAssertTrue(decodeCalled)
+        XCTAssertEqual(handedOver, ["/handover/org_3/manifests"])
+        XCTAssertEqual(urlsWritten["/handover/org_3/url"], PackageURL.p3.absoluteString)
     }
 
-    func test_run_list_newer() async throws {
-        // Input urls and api urls disagree - we're behind with reconciliation, i.e. the package list
-        // we process in validation is newer than the package list that has been reconciled when we
-        // make the dependencies API call.
+    func test_run_does_not_write_a_package_list() async throws {
+        // Which candidates get added is decided by add-validated-dependencies, after evaluation.
+        // This command deciding it too would add packages nothing ever evaluated.
+        Current = .mock
+        Current.fetchDependencies = { _ in [
+            .init(.p1, dependencies: []),
+            .init(.p2, dependencies: [.p3]),
+        ]}
+        Current.fetchRepository = { _, _ in .init(defaultBranch: "main", owner: "org", name: "3") }
+        Current.fetchManifests = { _, _, _ in }
+        var saved = [String]()
+        Current.fileManager.createFile = { path, _, _ in
+            if !path.hasSuffix("/url") { saved.append(path) }
+            return true
+        }
+        check.packageUrls = [.p1, .p2]
+
+        // MUT
+        try await check.run()
+
+        // validate
+        XCTAssertEqual(saved, [])
+    }
+
+    func test_run_discards_a_candidate_whose_manifests_could_not_be_fetched() async throws {
+        // A partly fetched package must not be left behind for evaluation - it would be added on
+        // the strength of whichever manifests happened to arrive.
         // setup
         Current = .mock
         Current.fetchDependencies = { _ in [
             .init(.p1, dependencies: []),
             .init(.p2, dependencies: [.p3]),
         ]}
-        var saved: [PackageURL]? = nil
-        Current.fileManager.createFile = { _, data, _ in
-            guard let data = data else {
-                XCTFail("data must not be nil")
-                return false
-            }
-            guard let list = try? JSONDecoder().decode([PackageURL].self, from: data) else {
-                XCTFail("decoding of output failed")
-                return false
-            }
-            saved = list
-            return true
-        }
         Current.fetchRepository = { _, url in
             if url == PackageURL.p3 {
                 return .init(defaultBranch: "main", owner: "org", name: "3")
@@ -111,56 +110,18 @@ final class CheckDependenciesTests: XCTestCase {
                 throw Error.unexpectedCall
             }
         }
-        Current.decodeManifest = { _, repo in
-            guard repo.path == "org/3" else { throw Error.unexpectedCall }
-            return .init(name: "3", products: [], dependencies: [])
+        Current.fetchManifests = { _, _, _ in
+            throw AppError.ioError("simulated fetch error")
         }
-        check.packageUrls = [.p1, .p2, .p4]
-        check.output = "package.json"
-
-        // MUT
-        try await check.run()
-
-        // validate
-        XCTAssertEqual(saved, [.p1, .p2, .p3, .p4])
-    }
-
-    func test_run_manifest_validation() async throws {
-        // Ensure validation via package dump is performed on new packages.
-        // setup
-        Current = .mock
-        Current.fetchDependencies = { _ in [
-            .init(.p1, dependencies: []),
-            .init(.p2, dependencies: [.p3]),
-        ]}
-        var saved: [PackageURL]? = nil
-        Current.fileManager.createFile = { path, data, _ in
-            guard path.hasSuffix("package.json"),
-                  let data = data,
-                  let list = try? JSONDecoder().decode([PackageURL].self, from: data) else { return false }
-            saved = list
-            return true
-        }
-        Current.fetchRepository = { _, url in
-            if url == PackageURL.p3 {
-                return .init(defaultBranch: "main", owner: "org", name: "3")
-            } else {
-                throw Error.unexpectedCall
-            }
-        }
-        Current.decodeManifest = { _, repo in
-            // simulate a bad manifest
-            throw AppError.dumpPackageError("simulated decoding error")
-        }
-
+        var removed = [String]()
+        Current.fileManager.removeItem = { removed.append($0) }
         check.packageUrls = [.p1, .p2]
-        check.output = "package.json"
 
         // MUT
         try await check.run()
 
         // validate
-        XCTAssertEqual(saved, [.p1, .p2])
+        XCTAssertEqual(removed, ["/handover/org_3"])
     }
 
     func test_issue_2828() async throws {
@@ -173,32 +134,20 @@ final class CheckDependenciesTests: XCTestCase {
             .init(.p1, dependencies: []),
             .init(.p2, dependencies: []),
         ]}
-        var saved: [PackageURL]? = nil
-        Current.fileManager.createFile = { path, data, _ in
-            guard path.hasSuffix("package.json") else { return false }
-            guard let data = data else {
-                XCTFail("data must not be nil")
-                return false
-            }
-            guard let list = try? JSONDecoder().decode([PackageURL].self, from: data) else {
-                XCTFail("decoding of output failed")
-                return false
-            }
-            saved = list
-            return true
-        }
         Current.fetchRepository = { _, url in throw Error.unexpectedCall }
+        Current.fetchManifests = { _, _, _ in throw Error.unexpectedCall }
         Current.fetch = { client, url in
             client.eventLoopGroup.next().makeFailedFuture(Error.unexpectedCall)
         }
+        var handedOver = [String]()
+        Current.fileManager.createDirectory = { path, _, _ in handedOver.append(path) }
         check.packageUrls = [.p2] // p1 not in input list - it's been removed by CheckRedirect
-        check.output = "package.json"
 
         // MUT
         try await check.run()
 
         // validate
-        XCTAssertEqual(saved, [.p2])
+        XCTAssertEqual(handedOver, [])
     }
 
 }

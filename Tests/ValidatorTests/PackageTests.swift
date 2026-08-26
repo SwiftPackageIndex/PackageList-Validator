@@ -23,30 +23,26 @@ import NIOHTTP1
 
 final class PackageTests: XCTestCase {
 
-    func test_decode_multiple_manifests() async throws {
-        // This tests package dump for a package with four versioned package manifest files.
-        // We use a captured response for a package which lists four manifest files.
-        // For three of them that shouldn't be used we send no data when they are fetched.
-        // We mock in the SemanticVersion manifest file for the one that should be decoded.
+    func test_fetch_multiple_manifests() async throws {
+        // A package with four versioned manifest files. All four are handed over: we no longer
+        // evaluate them here, so we cannot know which SwiftPM will pick.
         // setup
         Current = .mock
-        Current.fileManager = .live
         var manifestsFetched = 0
+        var written = [String]()
+        Current.fileManager.createFile = { path, _, _ in
+            written.append(path)
+            return true
+        }
         Current.fetch = { client, url in
             switch url.absoluteString {
-                case "https://raw.githubusercontent.com/org/1/main/Package@swift-6.swift":
-                    // Package.decode -> fetch manifestURL data
+                case "https://raw.githubusercontent.com/org/1/main/Package.swift",
+                    "https://raw.githubusercontent.com/org/1/main/Package@swift-6.swift",
+                    "https://raw.githubusercontent.com/org/1/main/Package@swift-4.2.swift",
+                    "https://raw.githubusercontent.com/org/1/main/Package@swift-4.swift":
                     manifestsFetched += 1
                     return client.eventLoopGroup.next().makeSucceededFuture(
                         try! .fixture(for: "SemanticVersion-Package.swift")
-                    )
-                case "https://raw.githubusercontent.com/org/1/main/Package.swift",
-                    "https://raw.githubusercontent.com/org/1/main/Package@swift-4.2.swift",
-                    "https://raw.githubusercontent.com/org/1/main/Package@swift-4.swift":
-                    // Package.decode -> fetch manifestURL data - save bad data in the unrelated manifests to raise an error if used
-                    manifestsFetched += 1
-                    return client.eventLoopGroup.next().makeSucceededFuture(
-                        .init()
                     )
                 case "https://api.github.com/repos/org/1/git/trees/main":
                     // getManifestURLs -> Github.listRepositoryFilePaths -> Github.fetch
@@ -59,18 +55,85 @@ final class PackageTests: XCTestCase {
                     )
             }
         }
-        Current.shell = .live
 
         let client = MockClient(response: { .mock(status: .ok) })
 
         // MUT
-        let pkg = try await Package.decode(client: client, repository: .init(defaultBranch: "main", owner: "org", name: "1"))
+        try await Package.fetchManifests(client: client,
+                                         repository: .init(defaultBranch: "main", owner: "org", name: "1"),
+                                         into: "/handover/org_1/manifests")
 
         // validate
         XCTAssertEqual(manifestsFetched, 4)
-        XCTAssertEqual(pkg.name, "SemanticVersion")
+        XCTAssertEqual(written.sorted(), [
+            "/handover/org_1/manifests/Package.swift",
+            "/handover/org_1/manifests/Package@swift-4.2.swift",
+            "/handover/org_1/manifests/Package@swift-4.swift",
+            "/handover/org_1/manifests/Package@swift-6.swift",
+        ])
     }
 
+    func test_getManifestURLs_ignores_paths_below_the_root() async throws {
+        // `Packages/Package.swift` is not this package's manifest, and it used to end up fetched
+        // under the same name as the real one, silently replacing it.
+        Current = .mock
+        Current.fetch = { client, url in
+            client.eventLoopGroup.next().makeSucceededFuture(
+                .init(string: #"{"tree":[{"type":"blob","path":"Package.swift"},"#
+                      + #"{"type":"blob","path":"Packages/Package.swift"},"#
+                      + #"{"type":"blob","path":"Sources/PackageX.swift"},"#
+                      + #"{"type":"blob","path":"Package@swift-5.swift"}]}"#)
+            )
+        }
+
+        // MUT
+        let urls = try await Package.getManifestURLs(client: MockClient(response: { .mock(status: .ok) }),
+                                                     repository: .init(defaultBranch: "main", owner: "org", name: "1"))
+
+        // validate
+        XCTAssertEqual(urls.map { $0.rawValue.lastPathComponent },
+                       ["Package.swift", "Package@swift-5.swift"])
+    }
+
+    func test_fetchManifests_rejects_a_manifest_path_that_escapes_the_directory() async throws {
+        // The manifest list comes from the repository, so it is attacker controlled. Nothing it
+        // names may be written outside the directory we were handed.
+        Current = .mock
+        var written = [String]()
+        Current.fileManager.createFile = { path, _, _ in
+            written.append(path)
+            return true
+        }
+        Current.fetch = { client, url in
+            guard url.absoluteString.hasSuffix("/git/trees/main") else {
+                return client.eventLoopGroup.next().makeSucceededFuture(.init(string: "manifest"))
+            }
+            return client.eventLoopGroup.next().makeSucceededFuture(
+                .init(string: #"{"tree":[{"type":"blob","path":"Package.swift/../../../etc/evil.swift"}]}"#)
+            )
+        }
+
+        // MUT
+        await XCTAssertThrowsErrorAsync(
+            try await Package.fetchManifests(client: MockClient(response: { .mock(status: .ok) }),
+                                             repository: .init(defaultBranch: "main", owner: "org", name: "1"),
+                                             into: "/handover/org_1/manifests")
+        )
+
+        // validate
+        XCTAssertEqual(written, [])
+    }
+
+}
+
+
+func XCTAssertThrowsErrorAsync(_ expression: @autoclosure () async throws -> some Any,
+                               file: StaticString = #filePath,
+                               line: UInt = #line) async {
+    do {
+        _ = try await expression()
+        XCTFail("expected an error to be thrown", file: file, line: line)
+    } catch {}
 }
 
 

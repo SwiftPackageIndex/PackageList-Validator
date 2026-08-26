@@ -1,4 +1,5 @@
 {
+  "originHash" : "357dae55948c44db3a8340d08f586aff16e5f70beace70d254d9eb31cb46b582",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -16,24 +17,6 @@
       "state" : {
         "revision" : "0652109907f980a4020e158f67d154424e3caa30",
         "version" : "0.0.8"
-      }
-    },
-    {
-      "identity" : "shellout",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/SwiftPackageIndex/ShellOut.git",
-      "state" : {
-        "revision" : "808c97cc684bceb58288db70e701fa66636cf31d",
-        "version" : "3.3.0"
-      }
-    },
-    {
-      "identity" : "shellquote",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/SwiftPackageIndex/ShellQuote",
-      "state" : {
-        "revision" : "5f555550c30ef43d64b36b40c2c291a95d62580c",
-        "version" : "1.0.2"
       }
     },
     {
@@ -244,15 +227,6 @@
       }
     },
     {
-      "identity" : "swift-tools-support-core",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-tools-support-core.git",
-      "state" : {
-        "revision" : "e8fbc8b05a155f311b862178d92d043afb216fe3",
-        "version" : "0.7.3"
-      }
-    },
-    {
       "identity" : "xctest-dynamic-overlay",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/xctest-dynamic-overlay",
@@ -262,5 +236,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

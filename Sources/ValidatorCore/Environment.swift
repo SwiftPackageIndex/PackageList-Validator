@@ -19,38 +19,37 @@ import NIO
 
 
 struct Environment {
-    var decodeManifest: (_ client: Client, _ repository: Github.Repository) async throws -> Package
+    var fetchManifests: (_ client: Client, _ repository: Github.Repository, _ directory: String) async throws -> Void
     var fileManager: FileManager
     var fetch: (_ client: Client, _ url: URL) -> EventLoopFuture<ByteBuffer>
     var fetchDependencies: (_ api: SwiftPackageIndexAPI) async throws -> [SwiftPackageIndexAPI.PackageRecord]
     var fetchRepository: (_ client: Client, _ url: PackageURL) async throws -> Github.Repository
     var githubToken: () -> String?
     var resolvePackageRedirects: (_ client: Client, _ url: PackageURL) async throws -> Redirect
-    var shell: Shell
 }
 
 
 extension Environment {
     static let live: Self = .init(
-        decodeManifest: { client, repo in try await Package.decode(client: client, repository: repo) },
+        fetchManifests: { client, repo, directory in
+            try await Package.fetchManifests(client: client, repository: repo, into: directory)
+        },
         fileManager: .live,
         fetch: Github.fetch(client:url:),
         fetchDependencies: { try await $0.fetchDependencies() },
         fetchRepository: Github.fetchRepository(client:url:),
         githubToken: { ProcessInfo.processInfo.environment["GITHUB_TOKEN"] },
-        resolvePackageRedirects: resolvePackageRedirects(client:for:),
-        shell: .live
+        resolvePackageRedirects: resolvePackageRedirects(client:for:)
     )
 
     static let mock: Self = .init(
-        decodeManifest: { _, _ in fatalError("not implemented") },
+        fetchManifests: { _, _, _ in fatalError("not implemented") },
         fileManager: .mock,
         fetch: { client, _ in client.eventLoopGroup.next().makeFailedFuture(AppError.runtimeError("unimplemented")) },
         fetchDependencies: { _ in [] },
         fetchRepository: { _, _ in .init(defaultBranch: "main", owner: "foo", name: "bar") },
         githubToken: { nil },
-        resolvePackageRedirects: { _, url in .initial(url) },
-        shell: .mock
+        resolvePackageRedirects: { _, url in .initial(url) }
     )
 }
 
