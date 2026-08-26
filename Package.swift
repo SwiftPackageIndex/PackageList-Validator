@@ -23,7 +23,6 @@ let package = Package(
       .executable(name: "validator", targets: ["validator"])
     ],
     dependencies: [
-        .package(url: "https://github.com/SwiftPackageIndex/ShellOut.git", from: "3.0.0"),
         .package(url: "https://github.com/SwiftPackageIndex/CanonicalPackageURL.git", from: "0.0.6"),
         .package(url: "https://github.com/apple/swift-algorithms.git", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
@@ -39,7 +38,6 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "CanonicalPackageURL", package: "CanonicalPackageURL"),
-                .product(name: "ShellOut", package: "ShellOut"),
                 .product(name: "Tagged", package: "swift-tagged"),
             ]),
         .testTarget(name: "ValidatorTests",

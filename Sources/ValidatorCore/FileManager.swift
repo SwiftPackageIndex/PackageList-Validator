@@ -17,6 +17,7 @@ import Foundation
 
 struct FileManager {
     var contents: (_ atPath: String) -> Data?
+    var contentsOfDirectory: (_ path: String) throws -> [String]
     var createDirectory: (_ path: String,
                           _ withIntermediateDirectories: Bool,
                           _ attributes: [FileAttributeKey : Any]?) throws -> Void
@@ -33,6 +34,7 @@ struct FileManager {
 extension FileManager {
     static let live: Self = .init(
         contents: Foundation.FileManager.default.contents(atPath:),
+        contentsOfDirectory: Foundation.FileManager.default.contentsOfDirectory(atPath:),
         createDirectory: Foundation.FileManager.default
             .createDirectory(atPath:withIntermediateDirectories:attributes:),
         createFile: Foundation.FileManager.default.createFile(atPath:contents:attributes:),
@@ -44,6 +46,7 @@ extension FileManager {
 
     static let mock: Self = .init(
         contents: { _ in nil },
+        contentsOfDirectory: { _ in [] },
         createDirectory: { _, _, _ in },
         createFile: { _, _, _ in true },
         fileExists: { _ in true },

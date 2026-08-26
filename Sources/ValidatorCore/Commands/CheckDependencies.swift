@@ -26,14 +26,14 @@ public struct CheckDependencies: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "read input URLs from file")
     var input: String?
 
-    @Option(name: .shortAndLong)
+    @Option(name: .shortAndLong, help: "stop after fetching this many candidates")
     var limit: Int = .max
+
+    @Option(name: .long, help: "directory to fetch candidate manifests into")
+    var manifestDir: String = ""
 
     @Option(name: .shortAndLong)
     var maxCheck: Int = .max
-
-    @Option(name: .shortAndLong, help: "save changes to output file")
-    var output: String?
 
     @Argument(help: "package URLs to check")
     var packageUrls: [PackageURL] = []
@@ -41,10 +41,20 @@ public struct CheckDependencies: AsyncParsableCommand {
     @Option(name: .long)
     var spiApiToken: String
 
+    public func validate() throws {
+        guard !manifestDir.isEmpty else {
+            throw ValidationError("""
+                Specify a manifest directory (--manifest-dir). Candidate manifests are fetched \
+                there for evaluate_manifests.sh to evaluate, so it must already exist.
+                """)
+        }
+    }
+
     public func run() async throws {
         let start = Date()
         defer { print("Elapsed (/min):", Date().timeIntervalSince(start)/60) }
 
+        let handover = ManifestHandover(root: manifestDir)
         let packageList = UniqueCanonicalPackageURLs(try inputSource.packageURLs())
 
         // fetch all dependencies
@@ -58,7 +68,7 @@ public struct CheckDependencies: AsyncParsableCommand {
         print("Not indexed:", missing.count)
 
         try await HTTPClient.with(configuration: .init(redirectConfiguration: .disallow)) { client in
-            var newPackages = UniqueCanonicalPackageURLs()
+            var candidates = 0
             for (idx, dep) in missing
                 .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
                 .prefix(maxCheck)
@@ -84,38 +94,33 @@ public struct CheckDependencies: AsyncParsableCommand {
                     continue
                 }
 
-                do {  // run package dump to validate
-                    let repo = try await Current.fetchRepository(client, resolved)
-                    _ = try await Current.decodeManifest(client, repo)
-                } catch {
-                    print("  ... ⛔ \(error)")
+                guard let repo = try? await Current.fetchRepository(client, resolved) else {
+                    print("  ... ⛔ could not fetch repository")
                     continue
                 }
 
-                if newPackages.insert(resolved.appendingGitExtension().canonicalPackageURL).inserted {
-                    print("✅ ADD (\(newPackages.count)):", resolved.appendingGitExtension())
+                do {  // hand the manifests over to be evaluated elsewhere
+                    let directory = try handover.prepare(slug: repo.handoverSlug,
+                                                         url: resolved.appendingGitExtension())
+                    try await Current.fetchManifests(client, repo, directory)
+                } catch {
+                    print("  ... ⛔ \(error)")
+                    // A partly fetched package would otherwise be evaluated and added on the
+                    // strength of whichever manifests happened to arrive.
+                    try? handover.discard(slug: repo.handoverSlug)
+                    continue
                 }
-                if newPackages.count >= limit {
+
+                candidates += 1
+                print("📦 CANDIDATE (\(candidates)):", resolved.appendingGitExtension())
+                if candidates >= limit {
                     print("  ... limit reached.")
                     break
                 }
             }
 
-            print("New packages:", newPackages.count)
-            for (idx, p) in newPackages
-                .sorted()
-                .enumerated() {
-                print("  ✅ ADD", idx, p)
-            }
-
-            // merge with existing and sort result
-            let merged = (packageList.map(\.packageURL) + newPackages.map(\.packageURL)).sorted()
-
-            print("Total:", merged.count)
-
-            if let path = output {
-                try Current.fileManager.saveList(merged, path: path)
-            }
+            print("Candidates for evaluation:", candidates)
+            print("Now evaluate \(manifestDir), then run add-validated-dependencies over it.")
         }
     }
 
@@ -132,24 +137,6 @@ extension CheckDependencies {
                 return .packageURLs(packageUrls)
             default:
                 return .invalid
-        }
-    }
-
-    enum InputSource {
-        case file(String)
-        case invalid
-        case packageURLs([PackageURL])
-
-        func packageURLs() throws -> [PackageURL] {
-            switch self {
-                case .file(let path):
-                    let fileURL = URL(fileURLWithPath: path)
-                    return try JSONDecoder().decode([PackageURL].self, from: Data(contentsOf: fileURL))
-                case .invalid:
-                    throw AppError.runtimeError("invalid input source")
-                case .packageURLs(let urls):
-                    return urls
-            }
         }
     }
 }
