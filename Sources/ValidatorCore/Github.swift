@@ -170,6 +170,7 @@ extension Github {
                 enum FileType: String, Decodable {
                     case blob
                     case tree
+                    case commit
                 }
             }
         }
