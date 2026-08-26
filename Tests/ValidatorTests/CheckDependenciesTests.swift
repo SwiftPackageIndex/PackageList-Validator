@@ -26,6 +26,7 @@ final class CheckDependenciesTests: XCTestCase {
     override func setUp() {
         super.setUp()
         check.apiBaseURL = "unused"
+        check.denyList = nil
         check.input = nil
         check.limit = .max
         check.manifestDir = "/handover"
@@ -124,6 +125,30 @@ final class CheckDependenciesTests: XCTestCase {
         XCTAssertEqual(removed, ["/handover/org_3"])
     }
 
+    func test_run_skips_a_denylisted_candidate_without_fetching_it() async throws {
+        // Otherwise it costs a redirect resolution, a repository fetch and a container, and
+        // apply-deny-list strips it again at the end of the run.
+        Current = .mock
+        Current.fetchDependencies = { _ in [.init(.p1, dependencies: [.denied, .wanted])] }
+        Current.fetchRepository = { _, url in
+            .init(defaultBranch: "main", owner: "org", name: url.repository)
+        }
+        var handedOver = [String]()
+        Current.fetchManifests = { _, _, directory in handedOver.append(directory) }
+        Current.fileManager.createFile = { _, _, _ in true }
+        Current.fileManager.contents = { _ in
+            Data(#"[{"package_url": "https://github.com/org/denied.git"}]"#.utf8)
+        }
+        check.packageUrls = [.p1]
+        check.denyList = "denylist.json"
+
+        // MUT
+        try await check.run()
+
+        // validate
+        XCTAssertEqual(handedOver, ["/handover/org_wanted/manifests"])
+    }
+
     func test_issue_2828() async throws {
         // https://github.com/SwiftPackageIndex/SwiftPackageIndex-Server/issues/2828
         // The input list coming out of RedirectCheck has removed packages. Ensure they are
@@ -166,6 +191,8 @@ private extension CanonicalPackageURL {
     static let p1 = CanonicalPackageURL(prefix: .gitAt, hostname: "github.com", path: "org/1")
     static let p2 = CanonicalPackageURL(prefix: .http, hostname: "github.com", path: "org/2")
     static let p3 = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/3")
+    static let denied = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/denied")
+    static let wanted = CanonicalPackageURL(prefix: .https, hostname: "github.com", path: "org/wanted")
 }
 
 private extension SwiftPackageIndexAPI.PackageRecord {

@@ -23,6 +23,9 @@ public struct CheckDependencies: AsyncParsableCommand {
     @Option(name: .long)
     var apiBaseURL: String = "https://swiftpackageindex.com"
 
+    @Option(name: .long, help: "path to denylist.json, so denied candidates are skipped rather than fetched")
+    var denyList: String?
+
     @Option(name: .shortAndLong, help: "read input URLs from file")
     var input: String?
 
@@ -58,14 +61,24 @@ public struct CheckDependencies: AsyncParsableCommand {
         let missing = allDependencies.subtracting(packageList)
         print("Not indexed:", missing.count)
 
+        // Denied packages are stripped by apply-deny-list at the end of the run regardless, so
+        // fetching and evaluating them first only burns the run's budget to arrive back here.
+        let denied = try denyList.map { try DenyList.load(from: $0) } ?? .empty
+        let candidateURLs = missing
+            .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
+            .filter { !denied.contains($0.packageURL) }
+        let skipped = missing.count - candidateURLs.count
+        if skipped > 0 {
+            print("On the deny list, skipping:", skipped)
+        }
+
         try await HTTPClient.with(configuration: .init(redirectConfiguration: .disallow)) { client in
             var candidates = 0
-            for (idx, dep) in missing
-                .sorted(by: { $0.packageURL.absoluteString < $1.packageURL.absoluteString })
+            for (idx, dep) in candidateURLs
                 .prefix(maxCheck)
                 .enumerated() {
                 if idx % 10 == 0 {
-                    print("Progress:", idx, "/", missing.count)
+                    print("Progress:", idx, "/", candidateURLs.count)
                 }
 
                 // resolve redirects
@@ -82,6 +95,13 @@ public struct CheckDependencies: AsyncParsableCommand {
 
                 if packageList.contains(resolved.canonicalPackageURL) {
                     print("  ... ⛔ already indexed")
+                    continue
+                }
+
+                // The pre-filter above cannot see this: a candidate that was not denied under its
+                // original URL can redirect onto one that is.
+                if denied.contains(resolved.appendingGitExtension()) {
+                    print("  ... ⛔ on the deny list")
                     continue
                 }
 
