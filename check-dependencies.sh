@@ -36,15 +36,25 @@ echo "..."
 echo
 
 echo "=== fetching candidate manifests into $manifest_dir ==="
+# --max-check walks candidates, --limit stops at the first one successfully handed over. Both are
+# needed: candidates are sorted by URL, and the first few are consistently non-GitHub hosts whose
+# redirect resolution returns nil, so --max-check 1 examines one URL, skips it, and fetches
+# nothing. Walking until something is actually fetched is what makes this test not vacuous.
 $validator check-dependencies \
     --spi-api-token "$SPI_API_TOKEN" \
     --input packages.json \
     --manifest-dir "$manifest_dir" \
-    --max-check 1
+    --max-check 25 --limit 1
 
 echo
 echo "=== handover layout ==="
 find "$manifest_dir" | sort
+
+if [ -z "$(find "$manifest_dir" -name 'Package*.swift' -print -quit)" ]; then
+    echo
+    echo "NOTE: no manifests were fetched, so the handover and add paths below prove nothing"
+    echo "      beyond the two commands agreeing that the directory is empty."
+fi
 
 # The sign off is what tells add-validated-dependencies that the manifests were actually
 # evaluated. Without it a directory nothing ever looked at is indistinguishable from one where
