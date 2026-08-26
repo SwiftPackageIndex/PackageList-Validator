@@ -14,7 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Smoke test for the dependency check, which is two commands with a handover directory between
+# them: check-dependencies fetches candidate manifests, something else evaluates them, and
+# add-validated-dependencies adds the ones that loaded.
+#
+# The evaluation step is deliberately not run here. It needs docker, this job runs inside a
+# container, and it belongs to PackageList (.github/evaluate_manifests.sh) rather than to this
+# repository. Running `swift package dump-package` directly instead would put third party manifest
+# code back in a process holding SPI_API_TOKEN, which is the thing the split exists to prevent. So
+# this stands in for that step by writing the markers it would have written.
+
+set -eu
+
 validator="swift run validator"
+manifest_dir="$(mktemp -d)"
 
 # log the first 10 packages so we can compare the chunking
 echo "Head of packages.json:"
@@ -22,7 +35,43 @@ curl -s https://raw.githubusercontent.com/SwiftPackageIndex/PackageList/main/pac
 echo "..."
 echo
 
+echo "=== fetching candidate manifests into $manifest_dir ==="
 $validator check-dependencies \
     --spi-api-token "$SPI_API_TOKEN" \
-    -i packages.json -o packages.json \
+    --input packages.json \
+    --manifest-dir "$manifest_dir" \
     --max-check 1
+
+echo
+echo "=== handover layout ==="
+find "$manifest_dir" | sort
+
+# The sign off is what tells add-validated-dependencies that the manifests were actually
+# evaluated. Without it a directory nothing ever looked at is indistinguishable from one where
+# nothing failed, so it has to refuse rather than add every candidate unchecked.
+echo
+echo "=== add-validated-dependencies must refuse an unevaluated handover ==="
+if $validator add-validated-dependencies \
+        --manifest-dir "$manifest_dir" \
+        --input packages.json --output /dev/null 2>&1
+then
+    echo "FAILED: it accepted a handover with no '$manifest_dir/evaluated' marker"
+    exit 1
+fi
+echo "... refused, as it should"
+
+# Standing in for evaluate_manifests.sh: pretend every candidate loaded. Nothing here evaluates
+# anything, so this says nothing about whether the manifests are valid - only that the two
+# commands agree on the directory layout.
+echo
+echo "=== signing off as the evaluation step would, then adding ==="
+touch "$manifest_dir/evaluated"
+$validator add-validated-dependencies \
+    --manifest-dir "$manifest_dir" \
+    --input packages.json --output packages.json
+
+echo
+echo "=== resulting packages.json ==="
+head -11 packages.json
+
+rm -rf "$manifest_dir"
