@@ -23,52 +23,6 @@ extension Validator {
         @Option(name: .shortAndLong, help: "Path to denylist.json")
         var denyFile: String
 
-        private struct DeniedPackage: Decodable {
-            var packageUrl: String
-
-            enum CodingKeys: String, CodingKey {
-                case packageUrl = "package_url"
-            }
-        }
-
-        func getDenyListUrls(from path: String) throws -> [PackageURL] {
-            let fileUrl = URL(fileURLWithPath: path)
-            let data = try Data(contentsOf: fileUrl)
-            let deniedPackages = try JSONDecoder().decode([DeniedPackage].self, from: data)
-            return try deniedPackages.map { deniedPackage in
-                guard let url = URL(string: deniedPackage.packageUrl)
-                else { throw AppError.invalidDenyListUrl(string: deniedPackage.packageUrl)}
-
-                return PackageURL(rawValue: url)
-            }
-        }
-
-        func processPackageDenyList(packageList: [PackageURL], denyList: [PackageURL]) -> [PackageURL] {
-            // Note: If the implementation of this function ever changes, `processPackageDenyList`
-            // in the Server project will also need updating to match.
-
-            struct CaseInsensitivePackageURL: Equatable, Hashable {
-                var url: PackageURL
-
-                init(_ url: PackageURL) {
-                    self.url = url
-                }
-
-                func hash(into hasher: inout Hasher) {
-                    hasher.combine(url.absoluteString.lowercased())
-                }
-
-                static func == (lhs: Self, rhs: Self) -> Bool {
-                    lhs.url.absoluteString.lowercased() == rhs.url.absoluteString.lowercased()
-                }
-            }
-
-            return Array(
-                Set(packageList.map(CaseInsensitivePackageURL.init))
-                    .subtracting(Set(denyList.map(CaseInsensitivePackageURL.init)))
-            ).map(\.url).sorted { $0.absoluteString.lowercased() < $1.absoluteString.lowercased() }
-        }
-
         var packageListEncoder: JSONEncoder {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.withoutEscapingSlashes, .prettyPrinted]
@@ -77,8 +31,7 @@ extension Validator {
 
         mutating func run() throws {
             let packageUrls = try InputSource.file(packagesFile).packageURLs()
-            let denyListUrls = try getDenyListUrls(from: denyFile)
-            let processedPackageList = processPackageDenyList(packageList: packageUrls, denyList: denyListUrls)
+            let processedPackageList = try DenyList.load(from: denyFile).excluding(packageUrls)
 
             let fileURL = URL(fileURLWithPath: packagesFile)
             try packageListEncoder.encode(processedPackageList).write(to: fileURL)

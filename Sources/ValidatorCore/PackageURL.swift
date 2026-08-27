@@ -46,6 +46,18 @@ extension PackageURL {
 }
 
 
+// GitHub treats owner and repository names case insensitively, so two spellings of one URL are one
+// package. Comparing by the lowercased string is what `Validator.ApplyDenyList` has always done and
+// what SwiftPackageIndex-Server mirrors.
+typealias CaseInsensitivePackageURL = TransformedHashable<PackageURL, String>
+
+extension CaseInsensitivePackageURL {
+    init(_ url: PackageURL) {
+        self.init(url, transform: { $0.lowercased() })
+    }
+}
+
+
 extension PackageURL: @retroactive ExpressibleByArgument {
     public init?(argument: String) {
         guard let url = URL(string: argument) else { return nil }
